@@ -94,12 +94,15 @@ import { useNavigate } from 'react-router-dom';
               </div>
             </button>
           </div>
+             {/* Fim tablet views*/} 
+
 
           <nav className="hidden lg:flex gap-6">
              {/* Aqui está o menu suspenso que aparece ao passar o mouse sobre "Shop" */}
             <div className="relative" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
 
               <button className="nav-shop-text text-sm font-bold black">Shop<FontAwesomeIcon icon={faAngleDown} /></button>
+
               {/* div com os links */}
               {isHovered && (
                 <div className="nav-shop-bar fixed left-52 top-100 flex w-8/12 h-5/6 bg-white shadow-[0_-4px_10px_rgba(0,0,0,0.9)] transition-opacity duration-300">
@@ -162,11 +165,10 @@ import { useNavigate } from 'react-router-dom';
                 </div>
               )}
             </div>
+                {/* Navbar opction*/} 
                 <a className="nav-links" href="/#"> Ofertas</a>
                 <a className="nav-links" href="/">Sobre nós</a>
                 <a className="nav-links" href="/">Contacte-nos</a>
-                 <a className="nav-links" href="/">Contacte-nos</a>
-                  <a className="nav-links" href="/">Contacte-nos</a>
                 <a className="nav-links flex" href="/#">NOVIDADES 
                 <img className='-mt-1 ml-1 w-4' src={fogo}/></a>
           </nav>
@@ -174,14 +176,17 @@ import { useNavigate } from 'react-router-dom';
 
 
           <div className="hidden lg:flex items-center gap-5">
-            
+            {/* Carrinho de compras */} 
             <div className="relative">
-              <a className="nav-icons" href="/shop"> <FontAwesomeIcon icon={faShoppingCart}  /></a>
+              <a className="nav-icons" title='Carrinho de comnpras' href="/shop"> <FontAwesomeIcon icon={faShoppingCart}  /></a>
               <div className="nav-icons-bar absolute rounded-full shadow-md bg-red-900 min-h-5 min-w-5 bottom-5
                left-3 text-xs flex items-center text-white cursor-pointer font-semibold">{itemCount}</div>
             </div>
-            <a className="nav-icons" href="/shop"><FontAwesomeIcon icon={faHeart} /> </a>
 
+             {/* Mostrar produtos e itens favoritos*/} 
+            <a className="nav-icons" title='Favoritos' href="/shop"><FontAwesomeIcon icon={faHeart} /> </a>
+
+             {/* User Login Pop-up / informação sobre Login */}  
             <div className="relative" onMouseEnter={() => setIsHoverLogin(true)} onMouseLeave={() => setIsHoverLogin(false)}>
             <a className="nav-icons flex max-h-32 gap-1" onClick={handleLogin}  href="/login">
               <FontAwesomeIcon icon={faUserAlt} />
