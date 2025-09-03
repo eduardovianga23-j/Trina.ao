@@ -58,17 +58,17 @@ import { useNavigate } from 'react-router-dom';
   const handleLogin = ()=>{
     navigateLogin("/login");
   };
-
+  
   return (
     <>
+      {/* Inicio Header */}   
       <header
         className={`${color ? 'header header-bg' : 'header'} ${
-          isHeaderFixed ? 'fixed-header' : ''
-        } z-20`}
-      >
-        <div className="flex justify-between w-[95%] items-center">
+          isHeaderFixed ? 'fixed-header' : ''} z-50`} >
+        <div className="flex justify-between w-[80%] items-center">
           <a className="text-xl text-red-900" href="/"> Trina .</a>
 
+           {/* Tablet views para Menu, Carrinho e favoritos */} 
           <div className="flex items-center gap-4 lg:hidden">
             <div className="relative">
               <a className="nav-icons" href="/shop"> <FontAwesomeIcon icon={faShoppingCart} /></a>
@@ -165,6 +165,8 @@ import { useNavigate } from 'react-router-dom';
                 <a className="nav-links" href="/#"> Ofertas</a>
                 <a className="nav-links" href="/">Sobre nós</a>
                 <a className="nav-links" href="/">Contacte-nos</a>
+                 <a className="nav-links" href="/">Contacte-nos</a>
+                  <a className="nav-links" href="/">Contacte-nos</a>
                 <a className="nav-links flex" href="/#">NOVIDADES 
                 <img className='-mt-1 ml-1 w-4' src={fogo}/></a>
           </nav>

@@ -82,24 +82,7 @@ const Promo = () =>{
         
         <div className='h-full  items-center flex bg-gray-100 flex-col justify-center '>
             <section className='w-full h-10 bg-red-800 p-7 flex items-center  justify-between'> 
-                 <h2 className="font-semibold text-white text-xs md:text-sm -ml-4 md:ml-0 lg:md-0 lg:text-lg">
-                  <FontAwesomeIcon className="w-10 lg:text-lg md:text-lg" icon={faClock} />PROMOÇÃO DA PURPLE JANUARY</h2> 
-
-                  <div className="flex items-center gap-14 lg:gap-6 w-1/6 lg:w-2/5 md:w-6/12"> 
-                    <h2 className="font-extrabold text-white hidden md:block md:text-sm lg:text-lg">Você não pode perder, Aproveite!!!</h2> 
-                       <div className="flex pr-8 lg:pr-1 w-1/6"> 
-                         <span className="p-2 rounded-sm text-sm text-black font-bold bg-white">
-                         {currentTime.hours}
-                         </span>
-                         <span> : </span>
-                         <span className="p-2 rounded-sm text-sm text-black font-bold bg-white">
-                         {currentTime.minutes}
-                         </span>
-                         <span> : </span>
-                         <span className="p-2 rounded-sm text-sm text-black font-bold bg-white">
-                         {currentTime.seconds}
-                         </span></div>
-                  </div>
+                  
             </section>
 
 
