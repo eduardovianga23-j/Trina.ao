@@ -1,38 +1,33 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
-import { AuthProvider } from './context/AuthContext';
-import { CartProvider } from './context/CartContext';
-import Navbar from './components/layout/Navbar';
-import Footer from './components/layout/Footer';
-import Home from './pages/Home/index';
-import Products from './pages/Product/Products';
-import Cart from './pages/Cart/index';
-import Login from './pages/Auth/Login';
-import Register from './pages/Auth/Register';
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import './App.css'
+import AOS from 'aos';
+import 'aos/dist/aos.css';
+import Home from './Pages/Home/Home'
+import { useEffect } from 'react';
+import Cart from './Pages/Cart/Cart';
+import Shop from './Pages/Shop/Shop';
+import Products from "./Pages/Products/Products";
+import Login from './Pages/Login/Login';
+import Register from './Pages/Login/Register';
 
-export default function App() {
+const App = () => {
+  useEffect(() => {
+    AOS.init({ offset: 10, duration: 400, easing: "ease-in-sine", delay: 8 });
+    AOS.refresh();
+  }, []);
+
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <CartProvider>
-          <Toaster position="top-right" toastOptions={{
-            style: { fontFamily: 'DM Sans, sans-serif', fontSize: '14px' }
-          }} />
-          <div className="min-h-screen flex flex-col">
-            <Navbar />
-            <main className="flex-1">
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/produtos" element={<Products />} />
-                <Route path="/carrinho" element={<Cart />} />
-                <Route path="/auth/login" element={<Login />} />
-                <Route path="/auth/register" element={<Register />} />
-              </Routes>
-            </main>
-            <Footer />
-          </div>
-        </CartProvider>
-      </AuthProvider>
+      <Routes>
+        <Route path='/' element={<Home />} />
+        <Route path='/shop' element={<Shop />} />
+        <Route path='/products' element={<Products />} />
+        <Route path='/cart' element={<Cart />} />
+        <Route path='/login' element={<Login />} />
+        <Route path='/register' element={<Register />} />
+      </Routes>
     </BrowserRouter>
-  );
+  )
 }
+
+export default App
