@@ -1,8 +1,8 @@
 const Footer = () => (
   <>
     <section className='w-full h-max justify-center flex items-center bg-zinc-300'>
-      <div className="w-11/12 items-center flex-col justify-center">
-        <div className="w-full grid grid-cols-1 md:grid-cols-4 h-max mt-5 p-12 gap-8">
+      <div className="container-site">
+        <div className="w-full grid grid-cols-2 md:grid-cols-4 mt-5 py-8 md:p-12 gap-x-4 gap-y-8">
           {[
             { title: "Políticas de uso", items: ["Políticas de privacidade","Políticas de cancelamento","Políticas de envios","Segurança e privacidade","Termos de conduções","Cookies"] },
             { title: "Trina.ao", items: ["Mercado","Ofertas","Sobre nós","Contate-nos","#novidades"] },
@@ -11,7 +11,7 @@ const Footer = () => (
           ].map(({ title, items }) => (
             <ul key={title} className='text-center text-black'>
               <li className="font-bold mb-2 text-sm">{title}</li>
-              {items.map(i => <li key={i} className='text-sm cursor-pointer hover:text-red-800'>{i}</li>)}
+              {items.map(i => <li key={i} className='text-xs sm:text-sm py-1 cursor-pointer hover:text-red-800'>{i}</li>)}
             </ul>
           ))}
         </div>
@@ -25,7 +25,7 @@ const Footer = () => (
         </div>
       </div>
     </section>
-    <div className="bg-black w-full h-[8vh] flex justify-center items-center">
+    <div className="bg-black w-full py-4 px-4 flex justify-center items-center">
       <h1 className='text-center text-xs text-zinc-400'>Copyright © 2024 Todos os direitos reservados.</h1>
     </div>
   </>

@@ -2,13 +2,13 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import './App.css'
 import AOS from 'aos';
 import 'aos/dist/aos.css';
-import Home from './Pages/Home/Home'
+import Home from './pages/Home/Home'
 import { useEffect } from 'react';
-import Cart from './Pages/Cart/Cart';
-import Shop from './Pages/Shop/Shop';
-import Products from "./Pages/Products/Products";
-import Login from './Pages/Login/Login';
-import Register from './Pages/Login/Register';
+import Cart from './pages/Cart/Cart';
+import Shop from './pages/Shop/Shop';
+import Products from "./pages/Products/Products";
+import Login from './pages/Login/Login';
+import Register from './pages/Login/Register';
 
 const App = () => {
   useEffect(() => {

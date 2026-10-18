@@ -4,6 +4,12 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: system-ui, sans-serif; }
+/* Evita scroll horizontal acidental no telemóvel (sem afetar position: sticky) */
+html, body { overflow-x: clip; }
+img { max-width: 100%; }
+
+/* Contentor padrão do site: 92% da largura, até 1280px */
+.container-site { width: 92%; max-width: 1280px; margin-left: auto; margin-right: auto; }
 
 .nav-btn {
   font-size: 13px;

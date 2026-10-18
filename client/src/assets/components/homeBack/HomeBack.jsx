@@ -13,7 +13,7 @@ const slides = [
 
 const HomeBack = () => {
   return (
-    <div className="w-full h-[600px] lg:h-[570px] mt-[80px] relative">
+    <div className="w-full h-[60vh] min-h-[340px] max-h-[520px] md:h-[480px] md:max-h-none lg:h-[570px] mt-[110px] relative">
       <div className="hidden md:block h-full w-full">
         <Swiper
           modules={[Navigation, Pagination, Autoplay, EffectFade]}
