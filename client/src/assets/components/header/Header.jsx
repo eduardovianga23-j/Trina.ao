@@ -24,20 +24,28 @@ const Header = ({ itemCount = 0 }) => {
   }, []);
 
   const toggleMenu = () => setMenuOpen(!menuOpen);
+
+  // Com o menu aberto: bloqueia o scroll da página e fecha com a tecla Esc
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? "hidden" : "";
+    const onKey = (e) => e.key === "Escape" && setMenuOpen(false);
+    window.addEventListener("keydown", onKey);
+    return () => { document.body.style.overflow = ""; window.removeEventListener("keydown", onKey); };
+  }, [menuOpen]);
   const navigate = useNavigate();
 
   return (
     <>
       <header className={`${color ? 'header header-bg' : 'header'} z-50`}>
-        <div className="flex justify-between w-[80%] items-center">
+        <div className="flex justify-between w-[92%] lg:w-[80%] items-center">
           <a className="text-xl text-red-900" href="/"> Trina .</a>
-          <div className="flex items-center gap-4 lg:hidden">
+          <div className="flex items-center gap-3 sm:gap-4 lg:hidden">
             <div className="relative">
               <a className="nav-icons" href="/shop"><FontAwesomeIcon icon={faShoppingCart} /></a>
               <div className="nav-icons-bar absolute rounded-full shadow-md min-h-5 min-w-5 bottom-5 left-4 text-xs flex items-center text-white cursor-pointer font-semibold">{itemCount}</div>
             </div>
             <a className="nav-icons" href="/shop"><FontAwesomeIcon icon={faHeart} /></a>
-            <button onClick={toggleMenu}>
+            <button onClick={toggleMenu} aria-label="Abrir menu" aria-expanded={menuOpen} className="p-1 -mr-1">
               {menuOpen ? <HiMenuAlt1 className="menu-c cursor-pointer" size={30}/> : <HiMenuAlt3 className="menu-c cursor-pointer" size={30}/>}
             </button>
           </div>
@@ -46,7 +54,7 @@ const Header = ({ itemCount = 0 }) => {
             <div className="relative" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
               <button className="nav-shop-text text-sm font-bold">Comprar<FontAwesomeIcon icon={faAngleDown} className="ml-1"/></button>
               {isHovered && (
-                <div className="nav-shop-bar fixed left-52 top-[100px] flex w-8/12 h-5/6 bg-white shadow-[0_-4px_10px_rgba(0,0,0,0.9)] z-50">
+                <div className="nav-shop-bar fixed left-1/2 -translate-x-1/2 top-[110px] flex w-[90%] xl:w-8/12 max-h-[calc(100vh-130px)] h-5/6 bg-white shadow-[0_-4px_10px_rgba(0,0,0,0.9)] z-50">
                   <div className="grid grid-cols-3 gap-6 h-full p-12">
                     <ul>
                       <li className="font-bold mb-2 text-sm">Malhas</li>
@@ -107,13 +115,30 @@ const Header = ({ itemCount = 0 }) => {
       </header>
 
       {menuOpen && (
-        <div className="fixed bottom-0 top-0 left-0 z-20 flex h-screen w-[75%] flex-col bg-zinc-200 px-8 pb-6 pt-16 transition-all duration-700 lg:hidden rounded-r-xl shadow-md">
-          <span className="absolute top-4 right-4 text-red-900 px-3 py-2 cursor-pointer text-2xl" onClick={toggleMenu}>✖</span>
-          <nav className="flex flex-col space-y-4 mt-12">
-            {[["Home","/"],["Shop","/shop"],["Ofertas","/#"],["Sobre nós","/#"],["Contate-nos","/#"],["#novidades","/#"],["Login","/login"]].map(([label,href])=>(
-              <a key={label} className="text-xl font-semibold text-red-900" href={href} onClick={()=>setMenuOpen(false)}>{label}</a>
-            ))}
-          </nav>
+        <div className="fixed inset-0 z-[60] lg:hidden">
+          {/* Fundo escuro: toca fora para fechar */}
+          <div className="absolute inset-0 bg-black/50" onClick={() => setMenuOpen(false)} />
+          <div className="absolute top-0 bottom-0 left-0 w-[80%] max-w-xs flex flex-col bg-zinc-100 shadow-xl rounded-r-xl overflow-y-auto">
+            <div className="flex items-center justify-between px-6 h-[70px] border-b border-zinc-300 shrink-0">
+              <a className="text-xl text-red-900" href="/">Trina .</a>
+              <button
+                onClick={() => setMenuOpen(false)}
+                aria-label="Fechar menu"
+                className="w-10 h-10 -mr-2 flex items-center justify-center text-red-900 text-2xl"
+              >
+                ✖
+              </button>
+            </div>
+            <nav className="flex flex-col px-6 py-4">
+              {[["Home","/"],["Shop","/shop"],["Ofertas","/#"],["Sobre nós","/#"],["Contate-nos","/#"],["#novidades","/#"]].map(([label,href])=>(
+                <a key={label} className="py-3 text-lg font-semibold text-red-900 border-b border-zinc-200" href={href} onClick={()=>setMenuOpen(false)}>{label}</a>
+              ))}
+            </nav>
+            <div className="mt-auto px-6 pb-8 pt-4 flex flex-col gap-3">
+              <a href="/login" className="w-full py-3 text-center text-sm font-bold text-white bg-red-800 hover:bg-red-900 rounded-md">Iniciar sessão</a>
+              <a href="/register" className="w-full py-3 text-center text-sm font-bold text-red-900 border-2 border-red-800 rounded-md">Criar conta</a>
+            </div>
+          </div>
         </div>
       )}
     </>

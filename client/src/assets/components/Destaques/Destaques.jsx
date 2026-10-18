@@ -26,11 +26,11 @@ const DestaquesData = [
 
 const Destaques = () =>{
     return(
-        <div  className='mw-10/12 h-full bg-blue-400 items-center flex justify-center py-10 my-16'>
-        <section data-aos="fade-up" className='w-10/12 tems-center flex-col justify-center'>
+        <div  className='w-full bg-blue-400 items-center flex justify-center py-10 my-16'>
+        <section data-aos="fade-up" className='container-site'>
           <h2 className='mb-10 border-l-8 text-sm sm:text-lg font-semibold'>Conheça os nossos estilos, e liberte a essência que há em ti</h2>
 
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-10 sm:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-6">
                  {DestaquesData.map((item, index) =>(
                   <DestaquesDataCard
                   key={index}

@@ -17,9 +17,9 @@ const BestData = [
 
 const BestProd = () => (
   <div data-aos="fade-up" className='h-full bg-white items-center flex justify-center mt-10 mb-10'>
-    <section className='w-10/12 items-center flex-col justify-center'>
-      <h1 className='text-sm md:text-lg lg:text-xl font-semibold mb-12 text-center'>CONHEÇA OS NOSSOS ESTILOS, E LIBERTE A ESSÊNCIA QUE HÁ EM TI</h1>
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-8 md:gap-2 lg:gap-6">
+    <section className='container-site'>
+      <h1 className='text-sm md:text-lg lg:text-xl font-semibold mb-8 md:mb-12 text-center px-2'>CONHEÇA OS NOSSOS ESTILOS, E LIBERTE A ESSÊNCIA QUE HÁ EM TI</h1>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-x-3 gap-y-8 sm:gap-x-5 lg:gap-x-6 lg:gap-y-12">
         {BestData.map((item, i) => <BestProdCard key={i} {...item}/>)}
       </div>
     </section>

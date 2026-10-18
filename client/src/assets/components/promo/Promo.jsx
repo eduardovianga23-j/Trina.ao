@@ -10,9 +10,9 @@ const PromoData = [
 const Promo = () => {
   return (
     <div className='h-full items-center flex bg-gray-100 flex-col justify-center'>
-      <section className='w-full h-10 bg-red-800 p-7 flex items-center justify-between'></section>
-      <section className="flex items-center justify-center my-6">
-        <div className="w-11/12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-8 lg:gap-4">
+      <section className='w-full h-10 sm:h-14 bg-red-800'></section>
+      <section className="w-full flex items-center justify-center my-6 md:my-10">
+        <div className="container-site grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 lg:gap-6">
           {PromoData.map((item, index) => <PromoDataCard key={index} {...item}/>)}
         </div>
       </section>
