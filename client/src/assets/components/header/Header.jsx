@@ -44,7 +44,7 @@ const Header = () => {
       <header className={`${color ? 'header header-bg' : 'header'} z-50`}>
         <div className="flex justify-between w-[92%] lg:w-[80%] items-center">
           <Link to="/" aria-label="Trina — página inicial" className="logo-trina shrink-0 flex items-center">
-            <Logo tagline className="h-[52px] sm:h-14" />
+            <Logo tagline className="h-10 sm:h-14" />
           </Link>
           <div className="flex items-center gap-3 sm:gap-4 lg:hidden">
             <CartIcon />
@@ -147,7 +147,7 @@ const Header = () => {
         >
           <div className="flex items-center justify-between px-6 h-[70px] border-b border-zinc-300 shrink-0">
             <Link to="/" onClick={() => setMenuOpen(false)} aria-label="Trina — página inicial" className="flex items-center text-[#AA0001]">
-              <Logo tagline className="h-11" />
+              <Logo tagline className="h-9" />
             </Link>
             <button
               onClick={() => setMenuOpen(false)}
