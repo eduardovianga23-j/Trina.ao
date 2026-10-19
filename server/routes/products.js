@@ -11,7 +11,7 @@ import {
   deleteProduct,
   addReview,
 } from '../controllers/productController.js';
-import { protect, adminOnly } from '../middleware/auth.js';
+import { protect, staffOnly } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -23,10 +23,10 @@ router.get('/:id/related', getRelatedProducts);
 router.get('/:id', getProductById);
 router.post('/:id/reviews', protect, addReview);
 
-// Só administradores
-router.get('/admin/all', protect, adminOnly, getAllProductsAdmin);
-router.post('/', protect, adminOnly, createProduct);
-router.put('/:id', protect, adminOnly, updateProduct);
-router.delete('/:id', protect, adminOnly, deleteProduct);
+// Equipa da loja (administrador principal e gestores)
+router.get('/admin/all', protect, staffOnly, getAllProductsAdmin);
+router.post('/', protect, staffOnly, createProduct);
+router.put('/:id', protect, staffOnly, updateProduct);
+router.delete('/:id', protect, staffOnly, deleteProduct);
 
 export default router;

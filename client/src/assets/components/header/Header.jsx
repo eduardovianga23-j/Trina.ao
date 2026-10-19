@@ -36,7 +36,7 @@ const Header = () => {
     return () => { document.body.style.overflow = ""; window.removeEventListener("keydown", onKey); };
   }, [menuOpen]);
   const navigate = useNavigate();
-  const { user, isAdmin, logout } = useAuth();
+  const { user, isStaff, logout } = useAuth();
   const handleLogout = () => { logout(); setMenuOpen(false); setIsHoverLogin(false); navigate('/'); };
 
   return (
@@ -99,7 +99,7 @@ const Header = () => {
             <CartIcon />
             <a className="nav-icons" href="/shop"><FontAwesomeIcon icon={faHeart}/></a>
             <div className="relative" onMouseEnter={()=>setIsHoverLogin(true)} onMouseLeave={()=>setIsHoverLogin(false)}>
-              <Link className="nav-icons" to={user ? (isAdmin ? "/admin" : "/") : "/login"} aria-label={user ? `Conta de ${user.name}` : "Iniciar sessão"}>
+              <Link className="nav-icons" to={user ? (isStaff ? "/admin" : "/") : "/login"} aria-label={user ? `Conta de ${user.name}` : "Iniciar sessão"}>
                 <FontAwesomeIcon icon={faUserAlt}/>
               </Link>
               {isHoverLogin && (
@@ -111,7 +111,7 @@ const Header = () => {
                           <p className="font-bold truncate">{user.name}</p>
                           <p className="text-xs text-zinc-500 truncate">{user.email}</p>
                         </li>
-                        {isAdmin && (
+                        {isStaff && (
                           <li><Link to="/admin" className="block px-3 py-2 rounded hover:bg-zinc-100 font-semibold">Painel de administração</Link></li>
                         )}
                         <li><Link to="/cart" className="block px-3 py-2 rounded hover:bg-zinc-100">Carrinho <FontAwesomeIcon icon={faShoppingCart} className="ml-1"/></Link></li>
@@ -177,7 +177,7 @@ const Header = () => {
             {user ? (
               <>
                 <p className="text-sm text-zinc-600 text-center">Olá, <span className="font-bold text-black">{user.name}</span></p>
-                {isAdmin && (
+                {isStaff && (
                   <Link to="/admin" onClick={() => setMenuOpen(false)} tabIndex={menuOpen ? 0 : -1} className="w-full py-3 text-center text-sm font-bold text-white bg-black rounded-md">Painel de administração</Link>
                 )}
                 <button onClick={handleLogout} tabIndex={menuOpen ? 0 : -1} className="w-full py-3 text-center text-sm font-bold text-red-900 border-2 border-red-800 rounded-md">Sair</button>

@@ -21,7 +21,7 @@ const Login = () => {
     try {
       const user = await login(form.email.trim(), form.password);
       // Volta à página de onde veio (ex.: /admin); senão, admin vai para o painel
-      navigate(location.state?.from || (user.role === 'admin' ? '/admin' : '/'), { replace: true });
+      navigate(location.state?.from || (['admin', 'manager'].includes(user.role) ? '/admin' : '/'), { replace: true });
     } catch (err) {
       setError(apiError(err, 'Não foi possível entrar.'));
     } finally {

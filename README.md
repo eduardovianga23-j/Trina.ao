@@ -38,6 +38,18 @@ npm install
 npm run dev            # abre em http://localhost:5173
 ```
 
+## Equipa: administrador principal e gestores
+
+| Papel | O que pode fazer |
+|---|---|
+| **Administrador principal** | Tudo: produtos e gestão da equipa (adicionar e remover gestores) |
+| **Gestor** | Criar, editar e apagar produtos |
+| **Cliente** | Comprar na loja |
+
+- O administrador principal cria-se com `npm run create-admin` (a password fica escondida enquanto escreves).
+- Para adicionar um gestor: a pessoa cria conta no site; depois, em **Painel → Equipa**, escreves o email dela e carregas em **Tornar gestor**. Ela deve sair e voltar a entrar.
+- Para remover: **Painel → Equipa → Remover**. A conta continua a existir, como cliente.
+
 ## Área de administração
 
 Entra com a conta de administrador e abre **/admin** (ou usa o menu da conta → "Painel de administração").
@@ -60,7 +72,7 @@ Entra com a conta de administrador e abre **/admin** (ou usa o menu da conta →
 | Comando | O que faz |
 |---|---|
 | `npm run dev` | Liga o servidor e reinicia ao guardar ficheiros |
-| `npm run create-admin` | Cria um administrador (ou promove uma conta existente) |
+| `npm run create-admin` | Cria o administrador principal (ou promove uma conta existente) |
 | `npm run seed` | Cria produtos de exemplo se a loja estiver vazia |
 | `npm run seed -- --force` | Apaga os produtos e volta a criar os de exemplo |
 
