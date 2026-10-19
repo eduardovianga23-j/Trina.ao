@@ -35,14 +35,21 @@ const Cart = () => {
               <ul className="md:col-span-2 divide-y divide-zinc-200 border-y border-zinc-200">
                 {items.map((item) => (
                   <li key={item.key} className="flex gap-3 sm:gap-4 py-4 sm:py-5">
-                    <Link to={`/produto/${item.slug}`} className="shrink-0"><img src={item.image} alt={item.name} className="w-20 h-24 sm:w-24 sm:h-28 object-cover rounded-md bg-zinc-100" /></Link>
+                    <Link to={`/produto/${item.slug}${item.color ? `?cor=${encodeURIComponent(item.color.name)}` : ''}`} className="shrink-0"><img src={item.image} alt={item.name} className="w-20 h-24 sm:w-24 sm:h-28 object-cover rounded-md bg-zinc-100" /></Link>
 
                     <div className="flex-1 min-w-0 flex flex-col">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <Link to={`/produto/${item.slug}`} className="font-bold text-sm leading-snug hover:underline">{item.name}</Link>
+                          <Link to={`/produto/${item.slug}${item.color ? `?cor=${encodeURIComponent(item.color.name)}` : ''}`} className="font-bold text-sm leading-snug hover:underline">{item.name}</Link>
                           <p className="text-xs text-zinc-500 mt-1 capitalize">
-                            {[item.size && `Tamanho ${item.size}`, item.color?.name].filter(Boolean).join(" · ")}
+                            {item.size && `Tamanho ${item.size}`}
+                            {item.size && item.color && " · "}
+                            {item.color && (
+                              <span className="inline-flex items-center gap-1 align-middle">
+                                <span className="inline-block w-3 h-3 rounded-full border border-black/20" style={{ backgroundColor: item.color.hex }} />
+                                {item.color.name}
+                              </span>
+                            )}
                           </p>
                         </div>
                         <button

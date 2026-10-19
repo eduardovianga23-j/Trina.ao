@@ -32,8 +32,9 @@ export const CartProvider = ({ children }) => {
     }
   }, [items]);
 
-  // addItem(produtoDaAPI, { size, color: {name, hex}, quantity })
-  const addItem = (product, { size = '', color = null, quantity = 1 } = {}) => {
+  // addItem(produtoDaAPI, { size, color: {name, hex}, image, quantity })
+  // image = foto da cor escolhida (para o carrinho mostrar a cor certa)
+  const addItem = (product, { size = '', color = null, image = '', quantity = 1 } = {}) => {
     const key = [product._id, size, color?.name || ''].join('|');
     setItems((prev) => {
       const existente = prev.find((i) => i.key === key);
@@ -47,7 +48,7 @@ export const CartProvider = ({ children }) => {
           productId: product._id,
           slug: product.slug,
           name: product.name,
-          image: product.images?.[0] || '',
+          image: image || product.images?.[0] || '',
           price: product.price,
           size,
           color,

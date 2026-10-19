@@ -3,12 +3,14 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import AdminLayout from './AdminLayout';
 import { productAPI, uploadAPI, apiError } from '../../services/api';
 import { CATEGORIES, categoryLabel, formatEUR } from '../../utils/format';
+import { dominantColor, suggestColorName } from '../../utils/dominantColor';
 
 /*
   /admin/novo  e  /admin/editar/:id
   Regras (também confirmadas pelo servidor):
   - Fotos: mínimo 2, máximo 4. A primeira é a principal.
   - Cores: só aparecem se "Este produto tem várias cores?" estiver ligado.
+    Cada cor pode ficar ligada a uma foto; a cor é detetada automaticamente dessa foto.
   - Tamanhos: escolhe os disponíveis; sem nenhum = tamanho único.
   - "Combina com": até 4 produtos sugeridos na página do produto.
 */
@@ -28,6 +30,10 @@ const EMPTY = {
   name: '', description: '', category: '', price: '', onSale: false, discount: '',
   images: [], sizes: [], hasColors: false, colors: [], related: [], featured: false, active: true,
 };
+
+// Cada cor tem uma chave só para o formulário (não é guardada)
+let colorSeq = 0;
+const newColor = (extra = {}) => ({ key: `c${++colorSeq}`, name: '', hex: '#999999', image: '', nameAuto: false, detecting: false, ...extra });
 
 const toNumber = (v) => (v === '' || v == null ? NaN : Number(String(v).replace(',', '.')));
 const round2 = (n) => Math.round(n * 100) / 100;
@@ -102,7 +108,8 @@ const AdminProductForm = () => {
           ...(data.originalPrice > data.price
             ? { price: String(data.originalPrice), onSale: true, discount: String(Math.round((1 - data.price / data.originalPrice) * 100)) }
             : { price: String(data.price), onSale: false, discount: '' }),
-          images: data.images, sizes: data.sizes, hasColors: data.hasColors, colors: data.colors,
+          images: data.images, sizes: data.sizes, hasColors: data.hasColors,
+          colors: data.colors.map((c) => newColor({ name: c.name, hex: c.hex, image: c.image || '' })),
           related: data.related.map(String), featured: data.featured, active: data.active,
         });
       })
@@ -146,7 +153,12 @@ const AdminProductForm = () => {
   };
 
   const removeImage = (url) => {
-    set('images', form.images.filter((u) => u !== url));
+    // Remove a foto e desliga-a das cores que a usavam
+    setForm((f) => ({
+      ...f,
+      images: f.images.filter((u) => u !== url),
+      colors: f.colors.map((c) => (c.image === url ? { ...c, image: '' } : c)),
+    }));
     // Foto acabada de enviar e ainda não guardada: apaga-a já do servidor
     if (newUploads.current.includes(url)) {
       newUploads.current = newUploads.current.filter((u) => u !== url);
@@ -173,11 +185,54 @@ const AdminProductForm = () => {
   const extraSizes = form.sizes.filter((s) => !SIZE_PRESETS[presetName].includes(s));
 
   // ---------- Cores ----------
-  const setHasColors = (on) =>
-    setForm((f) => ({ ...f, hasColors: on, colors: on && f.colors.length === 0 ? [{ name: '', hex: '#111111' }] : f.colors }));
-  const updateColor = (i, key, value) => set('colors', form.colors.map((c, idx) => (idx === i ? { ...c, [key]: value } : c)));
-  const addColor = () => form.colors.length < 12 && set('colors', [...form.colors, { name: '', hex: '#BB0320' }]);
-  const removeColor = (i) => set('colors', form.colors.filter((_, idx) => idx !== i));
+  const patchColor = (key, patch) =>
+    setForm((f) => ({ ...f, colors: f.colors.map((c) => (c.key === key ? { ...c, ...patch } : c)) }));
+
+  // Lê a cor do produto na foto e preenche a cor (e um nome sugerido, se ainda não escreveste nenhum)
+  const detectFor = async (key, url) => {
+    patchColor(key, { detecting: true });
+    const hex = await dominantColor(url);
+    setForm((f) => ({
+      ...f,
+      colors: f.colors.map((c) => {
+        if (c.key !== key) return c;
+        if (!hex || c.image !== url) return { ...c, detecting: false }; // a foto mudou entretanto
+        const rename = !c.name.trim() || c.nameAuto;
+        return { ...c, detecting: false, hex, ...(rename ? { name: suggestColorName(hex), nameAuto: true } : {}) };
+      }),
+    }));
+  };
+
+  // Cria uma cor para cada foto que ainda não tem cor
+  const colorsFromPhotos = (base = form) => {
+    const free = base.images.filter((u) => !base.colors.some((c) => c.image === u));
+    const created = free.map((url) => newColor({ image: url }));
+    setForm((f) => ({ ...f, hasColors: true, colors: [...f.colors, ...created] }));
+    created.forEach((c) => detectFor(c.key, c.image));
+  };
+
+  const setHasColors = (on) => {
+    if (!on) return set('hasColors', false);
+    if (form.colors.length > 0) return set('hasColors', true);
+    if (form.images.length > 0) return colorsFromPhotos(form);
+    setForm((f) => ({ ...f, hasColors: true, colors: [newColor()] }));
+  };
+
+  const updateColorName = (key, name) => patchColor(key, { name, nameAuto: false });
+  const updateColorHex = (key, hex) => patchColor(key, { hex });
+  const choosePhoto = (key, url) => {
+    patchColor(key, { image: url });
+    if (url) detectFor(key, url);
+  };
+  const addColor = () => {
+    if (form.colors.length >= 12) return;
+    const free = form.images.find((u) => !form.colors.some((c) => c.image === u)) || '';
+    const c = newColor({ image: free });
+    setForm((f) => ({ ...f, colors: [...f.colors, c] }));
+    if (free) detectFor(c.key, free);
+  };
+  const removeColor = (key) => set('colors', form.colors.filter((c) => c.key !== key));
+  const photosWithoutColor = form.images.filter((u) => !form.colors.some((c) => c.image === u));
 
   // ---------- Combina com ----------
   const candidates = useMemo(() => {
@@ -207,6 +262,8 @@ const AdminProductForm = () => {
     if (form.hasColors) {
       if (form.colors.length === 0) e.push('Adiciona pelo menos uma cor, ou desliga "várias cores".');
       if (form.colors.some((c) => !c.name.trim())) e.push('Dá um nome a cada cor (ex.: "Preto").');
+      const linked = form.colors.map((c) => c.image).filter(Boolean);
+      if (new Set(linked).size !== linked.length) e.push('Há duas cores ligadas à mesma foto. Cada foto só pode ter uma cor.');
       const names = form.colors.map((c) => c.name.trim().toLowerCase());
       if (new Set(names).size !== names.length) e.push('Há cores com o mesmo nome.');
     }
@@ -229,7 +286,9 @@ const AdminProductForm = () => {
       images: form.images,
       sizes: form.sizes,
       hasColors: form.hasColors,
-      colors: form.hasColors ? form.colors.map((c) => ({ name: c.name.trim(), hex: c.hex })) : [],
+      colors: form.hasColors
+        ? form.colors.map((c) => ({ name: c.name.trim(), hex: c.hex, ...(c.image && form.images.includes(c.image) ? { image: c.image } : {}) }))
+        : [],
       related: form.related,
       featured: form.featured,
       active: form.active,
@@ -373,22 +432,64 @@ const AdminProductForm = () => {
           <Section title="Cores">
             <Toggle id="hasColors" checked={form.hasColors} onChange={setHasColors}
               label="Este produto tem várias cores?"
-              description="Se estiver desligado, a escolha de cor não aparece na loja." />
+              description="Ao ligar, é criada uma cor para cada foto, com a cor detetada automaticamente. Na loja, ao escolher a cor, aparece a foto dessa cor." />
             {form.hasColors && (
-              <div className="mt-4 grid gap-2">
+              <div className="mt-4 grid gap-3">
+                {form.images.length === 0 && (
+                  <p className="text-xs text-amber-700">Adiciona primeiro as fotos para ligar cada cor à sua foto.</p>
+                )}
                 {form.colors.map((c, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <input type="color" value={c.hex} onChange={(e) => updateColor(i, 'hex', e.target.value)} aria-label={`Cor ${i + 1}`}
-                      className="w-11 h-11 rounded-md border border-zinc-300 p-1 bg-white cursor-pointer shrink-0" />
-                    <input className={inputCls} value={c.name} maxLength={40} onChange={(e) => updateColor(i, 'name', e.target.value)}
-                      placeholder="Nome da cor (ex.: Preto)" aria-label={`Nome da cor ${i + 1}`} />
-                    <button type="button" onClick={() => removeColor(i)} aria-label={`Remover cor ${i + 1}`}
-                      className="w-11 h-11 shrink-0 rounded-md border border-zinc-300 text-red-800 font-bold hover:bg-red-50">×</button>
+                  <div key={c.key} className="rounded-md border border-zinc-200 p-3">
+                    <div className="flex items-center gap-2">
+                      <input type="color" value={c.hex} onChange={(e) => updateColorHex(c.key, e.target.value)} aria-label={`Cor ${i + 1}`}
+                        className="w-11 h-11 rounded-md border border-zinc-300 p-1 bg-white cursor-pointer shrink-0" />
+                      <input className={inputCls} value={c.name} maxLength={40} onChange={(e) => updateColorName(c.key, e.target.value)}
+                        placeholder="Nome da cor (ex.: Preto)" aria-label={`Nome da cor ${i + 1}`} />
+                      <button type="button" onClick={() => removeColor(c.key)} aria-label={`Remover cor ${i + 1}`}
+                        className="w-11 h-11 shrink-0 rounded-md border border-zinc-300 text-red-800 font-bold hover:bg-red-50">×</button>
+                    </div>
+                    {form.images.length > 0 && (
+                      <div className="mt-3">
+                        <p className="text-xs text-zinc-500 mb-1.5">
+                          Foto desta cor
+                          {c.detecting && <span className="ml-1 text-red-800">· a detetar a cor...</span>}
+                          {!c.image && !c.detecting && <span className="ml-1 text-amber-700">· nenhuma escolhida</span>}
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {form.images.map((url, n) => {
+                            const mine = c.image === url;
+                            const takenBy = form.colors.find((o) => o.key !== c.key && o.image === url);
+                            return (
+                              <button type="button" key={url} onClick={() => choosePhoto(c.key, mine ? '' : url)} aria-pressed={mine}
+                                aria-label={`Usar a foto ${n + 1} para esta cor`}
+                                title={takenBy ? `Já usada por "${takenBy.name || 'outra cor'}"` : `Foto ${n + 1}`}
+                                className={`relative w-12 h-14 rounded overflow-hidden border-2 transition ${
+                                  mine ? 'border-black ring-2 ring-black/20' : 'border-transparent hover:border-zinc-400'} ${takenBy && !mine ? 'opacity-40' : ''}`}>
+                                <img src={url} alt="" className="w-full h-full object-cover" />
+                                {mine && <span className="absolute bottom-0 inset-x-0 text-[9px] font-bold bg-black text-white">✓</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {c.image && (
+                          <button type="button" onClick={() => detectFor(c.key, c.image)} className="mt-2 text-xs font-semibold text-zinc-600 hover:text-black underline underline-offset-2">
+                            Detetar a cor outra vez
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
-                {form.colors.length < 12 && (
-                  <button type="button" onClick={addColor} className="justify-self-start mt-1 text-sm font-semibold text-red-800 hover:underline">+ Adicionar cor</button>
-                )}
+                <div className="flex flex-wrap gap-x-5 gap-y-2 mt-1">
+                  {form.colors.length < 12 && (
+                    <button type="button" onClick={addColor} className="text-sm font-semibold text-red-800 hover:underline">+ Adicionar cor</button>
+                  )}
+                  {photosWithoutColor.length > 0 && form.colors.length > 0 && (
+                    <button type="button" onClick={() => colorsFromPhotos()} className="text-sm font-semibold text-red-800 hover:underline">
+                      + Criar cores para as {photosWithoutColor.length} foto(s) sem cor
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </Section>
