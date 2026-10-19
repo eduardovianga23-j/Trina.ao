@@ -1,0 +1,4 @@
+Coloca aqui os logótipos oficiais dos métodos de pagamento.
+Nomes aceites: mbway, multibanco, visa, mastercard, paypal, applepay, googlepay, klarna
+Formatos: .svg (recomendado), .png, .webp ou .jpg  (ex.: mbway.svg)
+O site usa-os automaticamente no rodapé.
