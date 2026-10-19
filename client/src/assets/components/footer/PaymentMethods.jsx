@@ -25,7 +25,7 @@ const METODOS = [
   { nome: "Google Pay", ficheiro: "googlepay", render: () => <SiGooglepay size={38} color="#3C4043" /> },
   { nome: "Klarna", ficheiro: "klarna", render: () => <SiKlarna size={18} color="#17120F" />, fundo: "#FFB3C7" },
   { nome: "MB WAY", ficheiro: "mbway" },
-  { nome: "Multibanco", ficheiro: "multibanco" },
+  { nome: "Multibanco", ficheiro: "multibanco", alturaImg: "h-10 sm:h-11" },
 ];
 
 const PaymentMethods = () => (
@@ -38,7 +38,7 @@ const PaymentMethods = () => (
 
     {/* Sempre em grelha: 4 + 4 no telemóvel e tablet, 8 numa linha a partir de 768px. Nunca fica um sozinho. */}
     <ul className="grid grid-cols-4 md:grid-cols-8 gap-2 sm:gap-3 max-w-md md:max-w-3xl mx-auto">
-      {METODOS.map(({ nome, ficheiro, render, fundo }) => {
+      {METODOS.map(({ nome, ficheiro, render, fundo, alturaImg }) => {
         const src = imagem(ficheiro);
         return (
           <li
@@ -49,7 +49,7 @@ const PaymentMethods = () => (
             style={{ backgroundColor: src ? "#fff" : fundo || "#fff" }}
           >
             {src ? (
-              <img src={src} alt={nome} className="max-h-7 max-w-full object-contain" />
+              <img src={src} alt={nome} className={`${alturaImg || "max-h-7"} max-w-full object-contain`} />
             ) : render ? (
               <>
                 <span aria-hidden="true" className="flex items-center">{render()}</span>
