@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import Logo from '../../assets/components/ui/Logo';
 
 // Moldura simples do painel: barra de topo + conteúdo
 const AdminLayout = ({ title, actions, children }) => {
@@ -10,7 +11,7 @@ const AdminLayout = ({ title, actions, children }) => {
       <header className="sticky top-0 z-40 bg-black text-white">
         <div className="container-site h-14 flex items-center justify-between gap-3">
           <Link to="/admin" className="text-lg">
-            <span className="text-red-500">Trina .</span> <span className="text-xs text-zinc-400 ml-1">admin</span>
+            <span className="flex items-end gap-2"><Logo className="h-7 text-white" /> <span className="text-xs text-zinc-400 pb-0.5">admin</span></span>
           </Link>
           <nav className="flex items-center gap-1 sm:gap-3 text-xs sm:text-sm">
             <Link to="/" className="px-2 py-2 hover:text-zinc-300">Ver loja</Link>

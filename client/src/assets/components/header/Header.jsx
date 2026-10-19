@@ -8,6 +8,7 @@ import { HiMenuAlt3, HiMenuAlt1 } from "react-icons/hi";
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import CartIcon from './CartIcon';
+import Logo from '../ui/Logo';
 
 const Header = () => {
   const [color, setColor] = useState(false);
@@ -42,7 +43,9 @@ const Header = () => {
     <>
       <header className={`${color ? 'header header-bg' : 'header'} z-50`}>
         <div className="flex justify-between w-[92%] lg:w-[80%] items-center">
-          <a className="text-xl text-red-900" href="/"> Trina .</a>
+          <Link to="/" aria-label="Trina — página inicial" className="logo-trina shrink-0 flex items-center">
+            <Logo className="h-8 sm:h-9" />
+          </Link>
           <div className="flex items-center gap-3 sm:gap-4 lg:hidden">
             <CartIcon />
             <a className="nav-icons" href="/shop"><FontAwesomeIcon icon={faHeart} /></a>
@@ -143,7 +146,9 @@ const Header = () => {
                       transition-transform duration-300 ease-out ${menuOpen ? "translate-x-0" : "-translate-x-full"}`}
         >
           <div className="flex items-center justify-between px-6 h-[70px] border-b border-zinc-300 shrink-0">
-            <a className="text-xl text-red-900" href="/">Trina .</a>
+            <Link to="/" onClick={() => setMenuOpen(false)} aria-label="Trina — página inicial" className="flex items-center text-[#AA0001]">
+              <Logo className="h-7" />
+            </Link>
             <button
               onClick={() => setMenuOpen(false)}
               aria-label="Fechar menu"

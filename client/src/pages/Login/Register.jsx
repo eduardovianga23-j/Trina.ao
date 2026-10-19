@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { apiError } from '../../services/api';
 import AuthField from '../../assets/components/ui/AuthField';
+import Logo from '../../assets/components/ui/Logo';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -31,7 +32,9 @@ const Register = () => {
   return (
     <div className='w-full min-h-screen items-center justify-center flex px-4 py-10' style={{backgroundColor:'#686464'}}>
       <form onSubmit={submit} className='bg-white w-full max-w-sm rounded-md p-5 sm:p-8' noValidate>
-        <Link to="/" className="block text-center text-xl text-red-900 mb-2">Trina .</Link>
+        <Link to="/" aria-label="Trina — página inicial" className="flex justify-center text-[#AA0001] mb-2">
+          <Logo tagline className="h-20 text-[9px]" />
+        </Link>
         <h1 className='flex items-center justify-center p-3 text-lg font-extrabold'>Cadastra-se</h1>
         <div className='flex items-center justify-center mb-6'>
           <div className='w-[80px] h-[8px] bg-red-700 rounded-lg'></div>
