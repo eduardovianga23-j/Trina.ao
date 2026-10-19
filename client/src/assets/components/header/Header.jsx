@@ -14,12 +14,12 @@ const Header = ({ itemCount = 0 }) => {
   const [isHoverLogin, setIsHoverLogin] = useState(false);
 
   const changeColor = () => {
-    if (window.scrollY >= 80) setColor(true);
-    else setColor(false);
+    setColor(window.scrollY >= 80);
   };
 
   useEffect(() => {
-    window.addEventListener("scroll", changeColor);
+    changeColor();
+    window.addEventListener("scroll", changeColor, { passive: true });
     return () => window.removeEventListener("scroll", changeColor);
   }, []);
 
@@ -54,7 +54,7 @@ const Header = ({ itemCount = 0 }) => {
             <div className="relative" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
               <button className="nav-shop-text text-sm font-bold">Comprar<FontAwesomeIcon icon={faAngleDown} className="ml-1"/></button>
               {isHovered && (
-                <div className="nav-shop-bar fixed left-1/2 -translate-x-1/2 top-[110px] flex w-[90%] xl:w-8/12 max-h-[calc(100vh-130px)] h-5/6 bg-white shadow-[0_-4px_10px_rgba(0,0,0,0.9)] z-50">
+                <div className={`nav-shop-bar fixed left-1/2 -translate-x-1/2 ${color ? "top-[70px]" : "top-[110px]"} flex w-[90%] xl:w-8/12 max-h-[calc(100vh-130px)] h-5/6 bg-white shadow-[0_-4px_10px_rgba(0,0,0,0.9)] z-50`}>
                   <div className="grid grid-cols-3 gap-6 h-full p-12">
                     <ul>
                       <li className="font-bold mb-2 text-sm">Malhas</li>
@@ -114,33 +114,52 @@ const Header = ({ itemCount = 0 }) => {
         </div>
       </header>
 
-      {menuOpen && (
-        <div className="fixed inset-0 z-[60] lg:hidden">
-          {/* Fundo escuro: toca fora para fechar */}
-          <div className="absolute inset-0 bg-black/50" onClick={() => setMenuOpen(false)} />
-          <div className="absolute top-0 bottom-0 left-0 w-[80%] max-w-xs flex flex-col bg-zinc-100 shadow-xl rounded-r-xl overflow-y-auto">
-            <div className="flex items-center justify-between px-6 h-[70px] border-b border-zinc-300 shrink-0">
-              <a className="text-xl text-red-900" href="/">Trina .</a>
-              <button
-                onClick={() => setMenuOpen(false)}
-                aria-label="Fechar menu"
-                className="w-10 h-10 -mr-2 flex items-center justify-center text-red-900 text-2xl"
+      {/* Menu de telemóvel: fica sempre montado e desliza da esquerda ao abrir */}
+      <div
+        className={`fixed inset-0 z-[60] lg:hidden ${menuOpen ? "pointer-events-auto" : "pointer-events-none"}`}
+        aria-hidden={!menuOpen}
+      >
+        {/* Fundo escuro: aparece suavemente; toca fora para fechar */}
+        <div
+          className={`absolute inset-0 bg-black/50 transition-opacity duration-300 ${menuOpen ? "opacity-100" : "opacity-0"}`}
+          onClick={() => setMenuOpen(false)}
+        />
+        <div
+          className={`absolute top-0 bottom-0 left-0 w-[80%] max-w-xs flex flex-col bg-zinc-100 shadow-xl rounded-r-xl overflow-y-auto
+                      transition-transform duration-300 ease-out ${menuOpen ? "translate-x-0" : "-translate-x-full"}`}
+        >
+          <div className="flex items-center justify-between px-6 h-[70px] border-b border-zinc-300 shrink-0">
+            <a className="text-xl text-red-900" href="/">Trina .</a>
+            <button
+              onClick={() => setMenuOpen(false)}
+              aria-label="Fechar menu"
+              tabIndex={menuOpen ? 0 : -1}
+              className="w-10 h-10 -mr-2 flex items-center justify-center text-red-900 text-2xl"
+            >
+              ✖
+            </button>
+          </div>
+          <nav className="flex flex-col px-6 py-4">
+            {[["Home","/"],["Shop","/shop"],["Ofertas","/#"],["Sobre nós","/#"],["Contate-nos","/#"],["#novidades","/#"]].map(([label,href], i)=>(
+              <a
+                key={label}
+                href={href}
+                tabIndex={menuOpen ? 0 : -1}
+                onClick={()=>setMenuOpen(false)}
+                style={{ transitionDelay: menuOpen ? `${120 + i * 50}ms` : "0ms" }}
+                className={`py-3 text-lg font-semibold text-red-900 border-b border-zinc-200 transition-all duration-300
+                            ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4"}`}
               >
-                ✖
-              </button>
-            </div>
-            <nav className="flex flex-col px-6 py-4">
-              {[["Home","/"],["Shop","/shop"],["Ofertas","/#"],["Sobre nós","/#"],["Contate-nos","/#"],["#novidades","/#"]].map(([label,href])=>(
-                <a key={label} className="py-3 text-lg font-semibold text-red-900 border-b border-zinc-200" href={href} onClick={()=>setMenuOpen(false)}>{label}</a>
-              ))}
-            </nav>
-            <div className="mt-auto px-6 pb-8 pt-4 flex flex-col gap-3">
-              <a href="/login" className="w-full py-3 text-center text-sm font-bold text-white bg-red-800 hover:bg-red-900 rounded-md">Iniciar sessão</a>
-              <a href="/register" className="w-full py-3 text-center text-sm font-bold text-red-900 border-2 border-red-800 rounded-md">Criar conta</a>
-            </div>
+                {label}
+              </a>
+            ))}
+          </nav>
+          <div className="mt-auto px-6 pb-8 pt-4 flex flex-col gap-3">
+            <a href="/login" tabIndex={menuOpen ? 0 : -1} className="w-full py-3 text-center text-sm font-bold text-white bg-red-800 hover:bg-red-900 rounded-md">Iniciar sessão</a>
+            <a href="/register" tabIndex={menuOpen ? 0 : -1} className="w-full py-3 text-center text-sm font-bold text-red-900 border-2 border-red-800 rounded-md">Criar conta</a>
           </div>
         </div>
-      )}
+      </div>
     </>
   );
 };
