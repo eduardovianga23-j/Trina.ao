@@ -1,3 +1,5 @@
+import PaymentMethods from "./PaymentMethods";
+
 const Footer = () => (
   <>
     <section className='w-full h-max justify-center flex items-center bg-zinc-300'>
@@ -15,18 +17,11 @@ const Footer = () => (
             </ul>
           ))}
         </div>
-        <div className="w-full py-8 text-center">
-          <h1 className='mb-4 font-bold text-sm'>Pagamentos seguros</h1>
-          <div className="flex flex-wrap justify-center gap-3">
-            {["WISE","PayPal","VISA","Paypay","Express","BAI"].map(p => (
-              <span key={p} className="h-9 px-4 flex items-center justify-center bg-white rounded-sm text-xs font-bold border">{p}</span>
-            ))}
-          </div>
-        </div>
+        <PaymentMethods />
       </div>
     </section>
     <div className="bg-black w-full py-4 px-4 flex justify-center items-center">
-      <h1 className='text-center text-xs text-zinc-400'>Copyright © 2024 Todos os direitos reservados.</h1>
+      <h1 className='text-center text-xs text-zinc-400'>Copyright © {new Date().getFullYear()} Trina.ao. Todos os direitos reservados.</h1>
     </div>
   </>
 );
