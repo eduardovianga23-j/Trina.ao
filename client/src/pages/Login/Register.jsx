@@ -33,7 +33,7 @@ const Register = () => {
     <div className='w-full min-h-screen items-center justify-center flex px-4 py-10' style={{backgroundColor:'#686464'}}>
       <form onSubmit={submit} className='bg-white w-full max-w-sm rounded-md p-5 sm:p-8' noValidate>
         <Link to="/" aria-label="Trina — página inicial" className="flex justify-center text-[#AA0001] mb-2">
-          <Logo tagline className="h-20 text-[9px]" />
+          <Logo tagline className="h-24" />
         </Link>
         <h1 className='flex items-center justify-center p-3 text-lg font-extrabold'>Cadastra-se</h1>
         <div className='flex items-center justify-center mb-6'>
