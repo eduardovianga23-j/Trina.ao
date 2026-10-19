@@ -1,4 +1,4 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import Header from "../../assets/components/header/Header";
 import TopHeader from "../../assets/components/topheader/TopHeader";
@@ -14,6 +14,7 @@ import { formatEUR, discountPercent, categoryLabel } from "../../utils/format";
 // Página de um produto:  /produto/:slug
 const Products = () => {
   const { slug } = useParams();
+  const [searchParams] = useSearchParams();
   const { addItem } = useCart();
 
   const [product, setProduct] = useState(null);
@@ -42,7 +43,14 @@ const Products = () => {
       .then(({ data }) => {
         if (cancel) return;
         setProduct(data);
-        setColor(data.hasColors ? data.colors[0] || null : null);
+        // Começa na cor da foto principal (se houver), senão na primeira cor
+        const cores = data.hasColors ? data.colors : [];
+        // ?cor=Preto (vindo do carrinho) abre já nessa cor e na foto dela
+        const pedida = cores.find((c) => c.name === searchParams.get("cor"));
+        const inicial = pedida || cores.find((c) => c.image === data.images[0]) || cores[0] || null;
+        setColor(inicial);
+        const idx = inicial?.image ? data.images.indexOf(inicial.image) : -1;
+        if (idx > 0) setSelectedImageIndex(idx);
         document.title = `${data.name} — Trina.ao`;
         return productAPI.getRelated(data._id).then(({ data: rel }) => !cancel && setRelated(rel));
       })
@@ -55,9 +63,27 @@ const Products = () => {
   const hasSizes = product?.sizes?.length > 0;
   const images = product?.images || [];
 
+  // Escolher uma cor mostra a foto dessa cor
+  const pickColor = (c) => {
+    setColor(c);
+    const idx = c.image ? images.indexOf(c.image) : -1;
+    if (idx >= 0) setSelectedImageIndex(idx);
+  };
+  // Ver uma foto que pertence a uma cor seleciona essa cor
+  const pickImage = (index) => {
+    setSelectedImageIndex(index);
+    const c = product?.hasColors && product.colors.find((col) => col.image === images[index]);
+    if (c) setColor(c);
+  };
+
   const handleAddToCart = () => {
     if (hasSizes && !size) { setSizeError(true); return; }
-    addItem(product, { size, color, quantity });
+    addItem(product, {
+      size,
+      color: color ? { name: color.name, hex: color.hex } : null,
+      image: color?.image || images[0], // o carrinho mostra a foto da cor escolhida
+      quantity,
+    });
     setAdded(true);
     setTimeout(() => setAdded(false), 2500);
   };
@@ -85,7 +111,7 @@ const Products = () => {
             <div className="w-full flex flex-col-reverse sm:flex-row items-start gap-3 lg:pr-10">
               <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-20 lg:w-[110px] shrink-0 overflow-x-auto">
                 {images.map((image, index) => (
-                  <button key={image} onClick={() => setSelectedImageIndex(index)} aria-label={`Ver foto ${index + 1}`} className="shrink-0">
+                  <button key={image} onClick={() => pickImage(index)} aria-label={`Ver foto ${index + 1}`} className="shrink-0">
                     <img
                       src={image}
                       alt=""
@@ -146,7 +172,7 @@ const Products = () => {
                         key={c.name}
                         role="radio"
                         aria-checked={color?.name === c.name}
-                        onClick={() => setColor(c)}
+                        onClick={() => pickColor(c)}
                         aria-label={c.name}
                         title={c.name}
                         className={`w-9 h-9 rounded-full border-2 p-0.5 ${color?.name === c.name ? "border-black" : "border-transparent"}`}

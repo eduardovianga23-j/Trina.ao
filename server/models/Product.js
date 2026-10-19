@@ -23,6 +23,8 @@ const colorSchema = new mongoose.Schema(
       required: true,
       match: [/^#[0-9a-fA-F]{6}$/, 'Cor inválida (use o formato #RRGGBB)'],
     },
+    // Foto que mostra o produto nesta cor (tem de ser uma das fotos do produto)
+    image: { type: String, trim: true },
   },
   { _id: false }
 );
@@ -103,6 +105,13 @@ productSchema.pre('validate', async function (next) {
   if (!this.hasColors) this.colors = [];
   else if (this.colors.length === 0) {
     this.invalidate('colors', 'Indica pelo menos uma cor, ou desliga "várias cores"');
+  }
+
+  // Cada cor só pode apontar para uma foto deste produto, e cada foto só para uma cor
+  const used = new Set();
+  for (const c of this.colors) {
+    if (c.image && (!this.images.includes(c.image) || used.has(c.image))) c.image = undefined;
+    if (c.image) used.add(c.image);
   }
 
   // Remove tamanhos repetidos ou vazios
