@@ -101,6 +101,11 @@ const AdminProducts = () => {
               <div className="flex flex-wrap gap-1 mt-1.5">
                 {!p.active && <span className="text-[10px] font-bold uppercase bg-zinc-200 text-zinc-700 px-1.5 py-0.5 rounded">Escondido</span>}
                 {p.featured && <span className="text-[10px] font-bold uppercase bg-yellow-300 text-black px-1.5 py-0.5 rounded">Destaque</span>}
+                {p.originalPrice > p.price && (
+                  <span className="text-[10px] font-bold bg-red-800 text-white px-1.5 py-0.5 rounded">
+                    Promoção -{Math.round((1 - p.price / p.originalPrice) * 100)}%
+                  </span>
+                )}
                 <span className="text-[10px] text-zinc-500 px-1.5 py-0.5 rounded border border-zinc-200">{p.images.length} fotos</span>
                 {p.hasColors && <span className="text-[10px] text-zinc-500 px-1.5 py-0.5 rounded border border-zinc-200">{p.colors.length} cores</span>}
               </div>

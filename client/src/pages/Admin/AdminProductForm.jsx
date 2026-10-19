@@ -25,11 +25,16 @@ const SIZE_PRESETS = {
 const suggestedPreset = (category) => (category === 'sapatos' ? 'Calçado' : 'Roupa');
 
 const EMPTY = {
-  name: '', description: '', category: '', price: '', originalPrice: '',
+  name: '', description: '', category: '', price: '', onSale: false, discount: '',
   images: [], sizes: [], hasColors: false, colors: [], related: [], featured: false, active: true,
 };
 
 const toNumber = (v) => (v === '' || v == null ? NaN : Number(String(v).replace(',', '.')));
+const round2 = (n) => Math.round(n * 100) / 100;
+const DISCOUNT_PRESETS = [10, 15, 20, 25, 30, 40, 50];
+const MAX_DISCOUNT = 90;
+// Preço final com desconto (ex.: 49,90 € com 20% -> 39,92 €)
+const salePrice = (normal, pct) => round2(normal * (1 - pct / 100));
 
 const Section = ({ title, hint, children }) => (
   <section className="bg-white rounded-lg border border-zinc-200 p-4 sm:p-6">
@@ -93,7 +98,10 @@ const AdminProductForm = () => {
         savedImages.current = data.images;
         setForm({
           name: data.name, description: data.description, category: data.category,
-          price: String(data.price), originalPrice: data.originalPrice ? String(data.originalPrice) : '',
+          // Em promoção: o preço normal é o preço anterior, e o desconto calcula-se a partir dos dois
+          ...(data.originalPrice > data.price
+            ? { price: String(data.originalPrice), onSale: true, discount: String(Math.round((1 - data.price / data.originalPrice) * 100)) }
+            : { price: String(data.price), onSale: false, discount: '' }),
           images: data.images, sizes: data.sizes, hasColors: data.hasColors, colors: data.colors,
           related: data.related.map(String), featured: data.featured, active: data.active,
         });
@@ -185,12 +193,15 @@ const AdminProductForm = () => {
   const validate = () => {
     const e = [];
     const price = toNumber(form.price);
-    const original = toNumber(form.originalPrice);
+    const pct = toNumber(form.discount);
     if (!form.name.trim()) e.push('Escreve o nome do produto.');
     if (!form.category) e.push('Escolhe uma categoria.');
     if (!form.description.trim()) e.push('Escreve uma descrição.');
     if (!(price > 0)) e.push('Indica um preço válido (ex.: 24,90).');
-    if (form.originalPrice !== '' && !(original > price)) e.push('O preço anterior tem de ser maior que o preço atual.');
+    if (form.onSale) {
+      if (!Number.isInteger(pct) || pct < 1 || pct > MAX_DISCOUNT) e.push(`Indica um desconto entre 1% e ${MAX_DISCOUNT}% (número inteiro).`);
+      else if (price > 0 && !(salePrice(price, pct) > 0)) e.push('Com esse desconto o preço final fica a zero.');
+    }
     if (form.images.length < MIN_IMAGES) e.push(`Adiciona pelo menos ${MIN_IMAGES} fotos (tens ${form.images.length}).`);
     if (form.images.length > MAX_IMAGES) e.push(`No máximo ${MAX_IMAGES} fotos.`);
     if (form.hasColors) {
@@ -212,8 +223,9 @@ const AdminProductForm = () => {
       name: form.name.trim(),
       description: form.description.trim(),
       category: form.category,
-      price: toNumber(form.price),
-      originalPrice: form.originalPrice === '' ? null : toNumber(form.originalPrice),
+      // Em promoção: guarda o preço final e o preço normal (riscado na loja)
+      price: form.onSale ? salePrice(toNumber(form.price), toNumber(form.discount)) : toNumber(form.price),
+      originalPrice: form.onSale ? toNumber(form.price) : null,
       images: form.images,
       sizes: form.sizes,
       hasColors: form.hasColors,
@@ -241,9 +253,10 @@ const AdminProductForm = () => {
     return <AdminLayout title={editing ? 'Editar produto' : 'Novo produto'}><p className="text-sm text-zinc-500">A carregar...</p></AdminLayout>;
   }
 
-  const price = toNumber(form.price);
-  const original = toNumber(form.originalPrice);
-  const discount = price > 0 && original > price ? Math.round(((original - price) / original) * 100) : 0;
+  const normalPrice = toNumber(form.price);
+  const pctNow = toNumber(form.discount);
+  const promoOk = form.onSale && Number.isInteger(pctNow) && pctNow >= 1 && pctNow <= MAX_DISCOUNT;
+  const finalPrice = normalPrice > 0 ? (promoOk ? salePrice(normalPrice, pctNow) : normalPrice) : NaN;
 
   return (
     <AdminLayout
@@ -421,18 +434,48 @@ const AdminProductForm = () => {
           <Section title="Preço">
             <div className="grid gap-4">
               <div>
-                <Label htmlFor="price">Preço (€)</Label>
+                <Label htmlFor="price">Preço normal (€)</Label>
                 <input id="price" inputMode="decimal" className={inputCls} value={form.price} onChange={(e) => set('price', e.target.value)} placeholder="24,90" />
               </div>
-              <div>
-                <Label htmlFor="originalPrice" optional>Preço anterior (€)</Label>
-                <input id="originalPrice" inputMode="decimal" className={inputCls} value={form.originalPrice} onChange={(e) => set('originalPrice', e.target.value)} placeholder="Para mostrar desconto" />
-              </div>
-              {price > 0 && (
-                <p className="text-sm">
-                  Na loja: <strong>{formatEUR(price)}</strong>
-                  {discount > 0 && <> <span className="line-through text-zinc-400 ml-1">{formatEUR(original)}</span> <span className="bg-yellow-400 text-xs px-1 rounded ml-1">-{discount}%</span></>}
-                </p>
+
+              <Toggle id="onSale" checked={form.onSale}
+                onChange={(on) => setForm((f) => ({ ...f, onSale: on, discount: on && !f.discount ? '20' : f.discount }))}
+                label="Em promoção" description="Mostra o preço normal riscado e a percentagem de desconto." />
+
+              {form.onSale && (
+                <div>
+                  <Label htmlFor="discount">Desconto (%)</Label>
+                  <div className="flex items-center gap-2">
+                    <input id="discount" inputMode="numeric" className={`${inputCls} max-w-[110px]`} value={form.discount}
+                      onChange={(e) => set('discount', e.target.value.replace(/[^0-9]/g, '').slice(0, 2))} placeholder="20" />
+                    <span className="text-sm text-zinc-500">%</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 mt-2" aria-label="Descontos rápidos">
+                    {DISCOUNT_PRESETS.map((d) => (
+                      <button type="button" key={d} onClick={() => set('discount', String(d))} aria-pressed={form.discount === String(d)}
+                        className={`px-2.5 py-1 text-xs font-semibold rounded-full border transition-colors ${
+                          form.discount === String(d) ? 'bg-red-800 text-white border-red-800' : 'bg-white border-zinc-300 hover:border-red-800'}`}>
+                        -{d}%
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {finalPrice > 0 && (
+                <div className="rounded-md bg-zinc-50 border border-zinc-200 p-3 text-sm">
+                  <p className="text-xs text-zinc-500 mb-1">Como aparece na loja</p>
+                  <p className="flex flex-wrap items-baseline gap-x-2">
+                    <strong className="text-lg">{formatEUR(finalPrice)}</strong>
+                    {promoOk && (
+                      <>
+                        <span className="line-through text-zinc-400">{formatEUR(normalPrice)}</span>
+                        <span className="bg-yellow-400 text-xs px-1.5 rounded">-{pctNow}%</span>
+                      </>
+                    )}
+                  </p>
+                  {promoOk && <p className="text-xs text-green-700 mt-1">O cliente poupa {formatEUR(normalPrice - finalPrice)}</p>}
+                </div>
               )}
             </div>
           </Section>
