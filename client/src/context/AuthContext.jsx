@@ -1,38 +1,65 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { authAPI } from '../services/api';
 
 const AuthContext = createContext(null);
 
+const readUser = () => {
+  try { return JSON.parse(localStorage.getItem('trina_user') || 'null'); } catch { return null; }
+};
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() =>
-    JSON.parse(localStorage.getItem('trina_user') || 'null')
-  );
-  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState(readUser);
+  const [checking, setChecking] = useState(Boolean(readUser()));
+
+  const save = (data) => {
+    setUser(data);
+    localStorage.setItem('trina_user', JSON.stringify(data));
+  };
+
+  const logout = useCallback(() => {
+    setUser(null);
+    localStorage.removeItem('trina_user');
+  }, []);
+
+  // Ao abrir o site, confirma que a sessão guardada ainda é válida (e se o papel mudou)
+  useEffect(() => {
+    const stored = readUser();
+    if (!stored?.token) return setChecking(false);
+    authAPI
+      .getMe()
+      .then(({ data }) => save({ ...stored, name: data.name, email: data.email, role: data.role }))
+      .catch(() => {})
+      .finally(() => setChecking(false));
+  }, []);
+
+  // Se o servidor disser que a sessão expirou
+  useEffect(() => {
+    const onLogout = () => setUser(null);
+    window.addEventListener('trina:logout', onLogout);
+    return () => window.removeEventListener('trina:logout', onLogout);
+  }, []);
 
   const login = async (email, password) => {
     const { data } = await authAPI.login({ email, password });
-    setUser(data);
-    localStorage.setItem('trina_user', JSON.stringify(data));
+    save(data);
     return data;
   };
 
   const register = async (name, email, password) => {
     const { data } = await authAPI.register({ name, email, password });
-    setUser(data);
-    localStorage.setItem('trina_user', JSON.stringify(data));
+    save(data);
     return data;
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('trina_user');
-  };
-
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading, isAdmin: user?.role === 'admin' }}>
+    <AuthContext.Provider value={{ user, login, register, logout, checking, isAdmin: user?.role === 'admin' }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth tem de ser usado dentro de <AuthProvider>');
+  return ctx;
+};

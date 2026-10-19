@@ -6,13 +6,11 @@ const imgs = [
   "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400&q=80",
 ];
 
+// Montra de estilos: cada cartão leva à loja já filtrada pela categoria
 const BestData = [
-  { img1: imgs[0], img2: imgs[1], img3: imgs[2], category: "CALÇAS", price: "15.540" },
-  { img1: imgs[1], img2: imgs[2], img3: imgs[0], category: "Macacões", price: "20.220" },
-  { img1: imgs[2], img2: imgs[0], img3: imgs[1], category: "SALTOS", price: "29.066" },
-  { img1: imgs[1], img2: imgs[2], img3: imgs[0], category: "CALÇAS", price: "15.540" },
-  { img1: imgs[2], img2: imgs[0], img3: imgs[1], category: "Fatos", price: "20.220" },
-  { img1: imgs[0], img2: imgs[1], img3: imgs[2], category: "SALTOS", price: "29.066" },
+  { img1: imgs[1], img2: imgs[2], img3: imgs[0], label: "Roupas", category: "roupas" },
+  { img1: imgs[0], img2: imgs[1], img3: imgs[2], label: "Sapatos", category: "sapatos" },
+  { img1: imgs[2], img2: imgs[0], img3: imgs[1], label: "Acessórios", category: "acessórios" },
 ];
 
 const BestProd = () => (

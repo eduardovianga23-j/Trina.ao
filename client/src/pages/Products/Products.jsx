@@ -1,162 +1,212 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { useCart } from "../../context/CartContext";
 import Header from "../../assets/components/header/Header";
 import TopHeader from "../../assets/components/topheader/TopHeader";
 import Footer from "../../assets/components/footer/footer";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faAngleRight } from "@fortawesome/free-solid-svg-icons";
 import { FaExpand, FaChevronLeft, FaChevronRight, FaTimes } from "react-icons/fa";
-import ShopDataCard from "../../assets/components/shopCard/ShopDataCard";
+import { ProductGrid } from "../../assets/components/shopCard/ShopDataCard";
+import { useCart } from "../../context/CartContext";
+import { productAPI, apiError } from "../../services/api";
+import { formatEUR, discountPercent, categoryLabel } from "../../utils/format";
 
-const otherImgs = [
-  "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400&q=80",
-  "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80",
-  "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400&q=80",
-  "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80",
-];
-const OtherData = [
-  { img: otherImgs[0], nomeProduto: "Salto Azalea", detalhesProduto: "Salto grosso tom", percentagem: -24, precoAnterior: "25.050", precoActual: "15.000" },
-  { img: otherImgs[1], nomeProduto: "Calça Your", detalhesProduto: "Your rules jeans two tone", percentagem: 0, precoAnterior: "35.050", precoActual: "25.030" },
-  { img: otherImgs[2], nomeProduto: "Óculos de Sol", detalhesProduto: "Desert Rider", percentagem: -4, precoAnterior: "19.056", precoActual: "11.065" },
-  { img: otherImgs[3], nomeProduto: "Ténis Mariella Strass", detalhesProduto: "Mariella Strass", percentagem: -10, precoAnterior: "24.044", precoActual: "15.230" },
-];
-
+// Página de um produto:  /produto/:slug
 const Products = () => {
-  const location = useLocation();
-  // Se a página for aberta sem escolher um produto, mostra o primeiro como exemplo
-  const { img, nomeProduto, percentagem, detalhesProduto2, precoAnterior, precoActual } = location.state || OtherData[0];
-  const galleryImages = [img || otherImgs[0], otherImgs[1], otherImgs[2], otherImgs[3]];
+  const { slug } = useParams();
+  const { addItem } = useCart();
+
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [related, setRelated] = useState([]);
+  const [relatedLoading, setRelatedLoading] = useState(true);
+
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [selectedOption, setSelectedOption] = useState("");
-  const [productCount, setProductCount] = useState(1);
-  const [selectedColor, setSelectedColor] = useState("vermelho");
-  const { addItem } = useCart();
+  const [size, setSize] = useState("");
+  const [color, setColor] = useState(null);
+  const [quantity, setQuantity] = useState(1);
   const [sizeError, setSizeError] = useState(false);
   const [added, setAdded] = useState(false);
 
-  // Ao abrir outro produto, volta ao estado inicial
+  // Carrega o produto e as sugestões sempre que o endereço muda
   useEffect(() => {
-    setSelectedImageIndex(0); setSelectedOption(""); setProductCount(1); setSizeError(false); setAdded(false);
-  }, [nomeProduto]);
+    let cancel = false;
+    setLoading(true); setError(""); setProduct(null);
+    setSelectedImageIndex(0); setSize(""); setQuantity(1); setSizeError(false); setAdded(false);
+    setRelated([]); setRelatedLoading(true);
+
+    productAPI
+      .getBySlug(slug)
+      .then(({ data }) => {
+        if (cancel) return;
+        setProduct(data);
+        setColor(data.hasColors ? data.colors[0] || null : null);
+        document.title = `${data.name} — Trina.ao`;
+        return productAPI.getRelated(data._id).then(({ data: rel }) => !cancel && setRelated(rel));
+      })
+      .catch((err) => !cancel && setError(err.response?.status === 404 ? "Este produto já não está disponível." : apiError(err)))
+      .finally(() => { if (!cancel) { setLoading(false); setRelatedLoading(false); } });
+
+    return () => { cancel = true; document.title = "Trina.ao — Liberta a tua essência"; };
+  }, [slug]);
+
+  const hasSizes = product?.sizes?.length > 0;
+  const images = product?.images || [];
 
   const handleAddToCart = () => {
-    if (!selectedOption) { setSizeError(true); return; }
-    addItem({ img, nomeProduto, precoActual, precoAnterior, tamanho: selectedOption, cor: selectedColor }, productCount);
+    if (hasSizes && !size) { setSizeError(true); return; }
+    addItem(product, { size, color, quantity });
     setAdded(true);
     setTimeout(() => setAdded(false), 2500);
   };
-  const colors = [{ name: "vermelho", colorCode: "#BB0320" }, { name: "Lilás", colorCode: "#BB0390" }, { name: "Marrom", colorCode: "#8B4513" }, { name: "Rosa", colorCode: "#FF69B4" }];
+
+  const desconto = product ? discountPercent(product.price, product.originalPrice) : 0;
 
   return (
     <>
       <TopHeader />
       <Header />
-      <div className="container-site mt-[110px] pt-4 sm:pt-8 mb-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[60%_40%] gap-8 md:gap-8 lg:gap-0">
-          {/* Galeria: no telemóvel a imagem principal fica em cima e as miniaturas por baixo */}
-          <div className="w-full flex flex-col-reverse sm:flex-row items-start gap-3 lg:pr-10">
-            <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-20 lg:w-[110px] shrink-0 overflow-x-auto">
-              {galleryImages.map((image, index) => (
-                <img
-                  key={index}
-                  src={image}
-                  alt={`Miniatura ${index + 1}`}
-                  onClick={() => setSelectedImageIndex(index)}
-                  className={`w-16 h-20 sm:w-full sm:h-auto sm:aspect-[4/5] shrink-0 object-cover cursor-pointer rounded-md border-2 ${selectedImageIndex === index ? "border-blue-500" : "border-gray-300"}`}
-                />
-              ))}
-            </div>
-            <div className="relative w-full flex-1">
-              <img
-                src={galleryImages[selectedImageIndex]}
-                alt={nomeProduto || "Produto"}
-                className="w-full aspect-[4/5] max-h-[560px] object-cover rounded-lg shadow-lg"
-              />
-              <button aria-label="Ampliar imagem" className="absolute top-3 left-3 bg-white w-10 h-10 flex items-center justify-center rounded-full shadow" onClick={() => setIsExpanded(true)}>
-                <FaExpand className="text-gray-700"/>
-              </button>
-            </div>
+      <div className="container-site mt-[110px] pt-4 sm:pt-8 mb-10 min-h-[60vh]">
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-pulse" aria-label="A carregar">
+            <div className="aspect-[4/5] bg-zinc-200 rounded-lg" />
+            <div className="space-y-4"><div className="h-8 bg-zinc-200 rounded w-2/3" /><div className="h-4 bg-zinc-200 rounded w-full" /><div className="h-4 bg-zinc-200 rounded w-5/6" /><div className="h-12 bg-zinc-200 rounded w-1/2 mt-8" /></div>
           </div>
-
-          <div className="w-full">
-            <h1 className="text-2xl sm:text-3xl font-semibold">{nomeProduto || "Produto"}</h1>
-            <span className="text-sm font-bold">Referência: <span className="font-normal ml-2">3336HSAUJ7</span></span>
-            <p className="text-sm mt-3 leading-relaxed">{detalhesProduto2 || "Produto de qualidade superior da Trina.ao."}</p>
-            <div className="mt-5"><span className="text-xs font-semibold"><FontAwesomeIcon className="mr-1" icon={faAngleRight}/>Recomendamos seu tamanho habitual</span></div>
-
-            <div className="mt-3 flex flex-col w-full max-w-[200px]">
-              <label htmlFor="tamanho" className="font-semibold text-sm">Tamanhos</label>
-              <select id="tamanho" value={selectedOption} onChange={(e) => { setSelectedOption(e.target.value); setSizeError(false); }} aria-invalid={sizeError} className={`px-4 py-2.5 mt-2 border text-base sm:text-sm rounded-sm bg-zinc-100 outline-none ${sizeError ? "border-red-700 ring-1 ring-red-700" : ""}`}>
-                <option value="" disabled>Selecione...</option>
-                {["36","37","38","39"].map(o => <option key={o} value={o}>{o}</option>)}
-              </select>
-              {sizeError && <p className="text-xs text-red-700 font-semibold mt-1.5">Escolhe um tamanho primeiro.</p>}
-            </div>
-
-            <div className="mt-5">
-              <h2 className="text-sm font-semibold">Cores</h2>
-              <div className="mt-2 flex gap-2">
-                {colors.map(color => (
-                  <button key={color.name} onClick={() => setSelectedColor(color.name)} aria-label={color.name}
-                    className={`w-9 h-9 rounded-full border-2 flex items-center justify-center ${selectedColor === color.name ? "border-black" : "border-transparent"}`}
-                    style={{ backgroundColor: color.colorCode }}>
-                    {selectedColor === color.name && <span className="text-white text-xs">✔</span>}
+        ) : error ? (
+          <div className="text-center py-20">
+            <p className="text-lg font-semibold text-zinc-700">{error}</p>
+            <Link to="/shop" className="inline-block mt-6 py-3 px-8 bg-black text-white text-sm font-semibold rounded-sm">Ver outros produtos</Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-[60%_40%] gap-8 md:gap-8 lg:gap-0">
+            {/* Galeria: no telemóvel a imagem principal fica em cima e as miniaturas por baixo */}
+            <div className="w-full flex flex-col-reverse sm:flex-row items-start gap-3 lg:pr-10">
+              <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-20 lg:w-[110px] shrink-0 overflow-x-auto">
+                {images.map((image, index) => (
+                  <button key={image} onClick={() => setSelectedImageIndex(index)} aria-label={`Ver foto ${index + 1}`} className="shrink-0">
+                    <img
+                      src={image}
+                      alt=""
+                      className={`w-16 h-20 sm:w-full sm:h-auto sm:aspect-[4/5] object-cover rounded-md border-2 ${selectedImageIndex === index ? "border-black" : "border-zinc-200"}`}
+                    />
                   </button>
                 ))}
               </div>
-            </div>
-
-            <div className="mt-5">
-              <span className="text-sm font-semibold">Quantidade</span>
-              <div className="flex items-center mt-2">
-                <button aria-label="Diminuir" className="w-10 h-10 bg-black text-white rounded-sm text-lg" onClick={() => setProductCount(p => Math.max(1, p-1))}>-</button>
-                <span className="w-12 text-center">{productCount}</span>
-                <button aria-label="Aumentar" className="w-10 h-10 bg-black text-white rounded-sm text-lg" onClick={() => setProductCount(p => p+1)}>+</button>
+              <div className="relative w-full flex-1">
+                <img src={images[selectedImageIndex]} alt={product.name} className="w-full aspect-[4/5] max-h-[560px] object-cover rounded-lg shadow-lg bg-zinc-100" />
+                <button aria-label="Ampliar imagem" className="absolute top-3 left-3 bg-white w-10 h-10 flex items-center justify-center rounded-full shadow" onClick={() => setIsExpanded(true)}>
+                  <FaExpand className="text-gray-700"/>
+                </button>
               </div>
             </div>
 
-            <div className="mt-6">
-              {precoAnterior && <p className="text-base sm:text-lg line-through text-red-900 font-bold">{precoAnterior} Akz</p>}
-              <div className="flex items-center gap-4">
-                <p className="text-2xl font-bold">{precoActual} Akz</p>
-                {percentagem !== 0 && percentagem !== undefined && <span className="text-sm bg-yellow-400 px-1.5 rounded-sm">{percentagem}%</span>}
-              </div>
-            </div>
-            <div className="mt-6 flex flex-col sm:flex-row sm:items-center gap-3">
-              <button
-                onClick={handleAddToCart}
-                className={`w-full sm:w-auto py-3 px-10 text-white text-sm font-semibold rounded-sm transition-colors
-                            ${added ? "bg-green-700" : "bg-black hover:bg-zinc-800"}`}
-              >
-                {added ? "✓ Adicionado ao carrinho" : "Adicionar ao carrinho"}
-              </button>
-              {added && (
-                <Link to="/cart" className="text-center text-sm font-semibold underline underline-offset-4 hover:text-red-800">
-                  Ver carrinho
-                </Link>
+            <div className="w-full">
+              <Link to={`/shop?category=${encodeURIComponent(product.category)}`} className="text-xs uppercase tracking-wider text-zinc-500 hover:text-black">
+                {categoryLabel(product.category)}
+              </Link>
+              <h1 className="text-2xl sm:text-3xl font-semibold mt-1">{product.name}</h1>
+              <p className="text-sm mt-3 leading-relaxed whitespace-pre-line text-zinc-700">{product.description}</p>
+
+              {hasSizes ? (
+                <>
+                  <div className="mt-5"><span className="text-xs font-semibold"><FontAwesomeIcon className="mr-1" icon={faAngleRight}/>Recomendamos o teu tamanho habitual</span></div>
+                  <fieldset className="mt-3">
+                    <legend className="font-semibold text-sm">Tamanho</legend>
+                    <div className="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-invalid={sizeError}>
+                      {product.sizes.map((s) => (
+                        <button
+                          key={s}
+                          role="radio"
+                          aria-checked={size === s}
+                          onClick={() => { setSize(s); setSizeError(false); }}
+                          className={`min-w-[44px] h-10 px-3 border text-sm rounded-sm transition-colors ${
+                            size === s ? "bg-black text-white border-black" : sizeError ? "border-red-700" : "border-zinc-300 hover:border-black"
+                          }`}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                    {sizeError && <p className="text-xs text-red-700 font-semibold mt-1.5">Escolhe um tamanho primeiro.</p>}
+                  </fieldset>
+                </>
+              ) : (
+                <p className="mt-5 text-sm text-zinc-600">Tamanho único</p>
               )}
+
+              {/* As cores só aparecem quando o produto tem várias cores */}
+              {product.hasColors && product.colors.length > 0 && (
+                <fieldset className="mt-5">
+                  <legend className="text-sm font-semibold">Cor: <span className="font-normal capitalize">{color?.name}</span></legend>
+                  <div className="mt-2 flex flex-wrap gap-2" role="radiogroup">
+                    {product.colors.map((c) => (
+                      <button
+                        key={c.name}
+                        role="radio"
+                        aria-checked={color?.name === c.name}
+                        onClick={() => setColor(c)}
+                        aria-label={c.name}
+                        title={c.name}
+                        className={`w-9 h-9 rounded-full border-2 p-0.5 ${color?.name === c.name ? "border-black" : "border-transparent"}`}
+                      >
+                        <span className="block w-full h-full rounded-full border border-black/10" style={{ backgroundColor: c.hex }} />
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
+
+              <div className="mt-5">
+                <span className="text-sm font-semibold">Quantidade</span>
+                <div className="flex items-center mt-2">
+                  <button aria-label="Diminuir" className="w-10 h-10 bg-black text-white rounded-sm text-lg" onClick={() => setQuantity(p => Math.max(1, p-1))}>-</button>
+                  <span className="w-12 text-center">{quantity}</span>
+                  <button aria-label="Aumentar" className="w-10 h-10 bg-black text-white rounded-sm text-lg" onClick={() => setQuantity(p => Math.min(99, p+1))}>+</button>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                {desconto !== 0 && <p className="text-base sm:text-lg line-through text-red-900 font-bold">{formatEUR(product.originalPrice)}</p>}
+                <div className="flex items-center gap-4">
+                  <p className="text-2xl font-bold">{formatEUR(product.price)}</p>
+                  {desconto !== 0 && <span className="text-sm bg-yellow-400 px-1.5 rounded-sm">{desconto}%</span>}
+                </div>
+                <p className="text-xs text-zinc-500 mt-1">IVA incluído</p>
+              </div>
+
+              <div className="mt-6 flex flex-col sm:flex-row sm:items-center gap-3">
+                <button
+                  onClick={handleAddToCart}
+                  className={`w-full sm:w-auto py-3 px-10 text-white text-sm font-semibold rounded-sm transition-colors ${added ? "bg-green-700" : "bg-black hover:bg-zinc-800"}`}
+                >
+                  {added ? "✓ Adicionado ao carrinho" : "Adicionar ao carrinho"}
+                </button>
+                {added && (
+                  <Link to="/cart" className="text-center text-sm font-semibold underline underline-offset-4 hover:text-red-800">Ver carrinho</Link>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
-      <section className="w-full mt-12 sm:mt-20 mb-16 sm:mb-20">
-        <h2 className="font-semibold text-black text-lg sm:text-xl text-center px-4">Você também pode comprar</h2>
-        <section className="flex items-center justify-center my-6">
-          <div className="container-site grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 lg:gap-6">
-            {OtherData.map((item, i) => <ShopDataCard key={i} {...item} />)}
-          </div>
+      {!error && (relatedLoading || related.length > 0) && (
+        <section className="w-full mt-12 sm:mt-20 mb-16 sm:mb-20">
+          <h2 className="font-semibold text-black text-lg sm:text-xl text-center px-4">Você também pode comprar</h2>
+          <section className="flex items-center justify-center my-6">
+            <ProductGrid className="container-site" products={related} loading={relatedLoading} error="" />
+          </section>
         </section>
-      </section>
+      )}
 
-      {isExpanded && (
+      {isExpanded && product && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/90 z-[70]" onClick={() => setIsExpanded(false)}>
           <button aria-label="Fechar" className="absolute top-4 right-4 w-11 h-11 flex items-center justify-center text-white text-2xl"><FaTimes/></button>
-          <button aria-label="Anterior" onClick={(e) => { e.stopPropagation(); setSelectedImageIndex(i => (i-1+galleryImages.length)%galleryImages.length); }} className="absolute left-1 sm:left-10 w-11 h-11 flex items-center justify-center text-white text-3xl sm:text-4xl z-10"><FaChevronLeft/></button>
-          <img src={galleryImages[selectedImageIndex]} alt="Expandido" onClick={(e) => e.stopPropagation()} className="max-w-[90%] max-h-[85vh] object-contain rounded-lg"/>
-          <button aria-label="Seguinte" onClick={(e) => { e.stopPropagation(); setSelectedImageIndex(i => (i+1)%galleryImages.length); }} className="absolute right-1 sm:right-10 w-11 h-11 flex items-center justify-center text-white text-3xl sm:text-4xl z-10"><FaChevronRight/></button>
+          <button aria-label="Anterior" onClick={(e) => { e.stopPropagation(); setSelectedImageIndex(i => (i-1+images.length)%images.length); }} className="absolute left-1 sm:left-10 w-11 h-11 flex items-center justify-center text-white text-3xl sm:text-4xl z-10"><FaChevronLeft/></button>
+          <img src={images[selectedImageIndex]} alt={product.name} onClick={(e) => e.stopPropagation()} className="max-w-[90%] max-h-[85vh] object-contain rounded-lg"/>
+          <button aria-label="Seguinte" onClick={(e) => { e.stopPropagation(); setSelectedImageIndex(i => (i+1)%images.length); }} className="absolute right-1 sm:right-10 w-11 h-11 flex items-center justify-center text-white text-3xl sm:text-4xl z-10"><FaChevronRight/></button>
         </div>
       )}
       <Footer />

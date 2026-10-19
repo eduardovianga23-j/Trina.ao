@@ -4,20 +4,16 @@ import { createContext, useContext, useEffect, useState } from 'react';
   Carrinho da Trina.ao
   - Guarda os produtos no navegador (localStorage), por isso não se perdem ao recarregar a página.
   - O mesmo produto com tamanho ou cor diferente conta como uma linha separada.
+  - Preços em euros.
   - Use em qualquer componente com:  const { count, addItem } = useCart();
 */
 
 const CartContext = createContext(null);
-const STORAGE_KEY = 'trina_cart';
-
-// "15.000" -> 15000
-export const parsePreco = (preco) => Number(String(preco ?? '').replace(/\./g, '').replace(',', '.')) || 0;
-
-// 15000 -> "15.000"
-export const formatPreco = (valor) => Math.round(valor).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+const STORAGE_KEY = 'trina_cart_v2'; // v2 = produtos vindos da base de dados, em euros
 
 const lerCarrinho = () => {
   try {
+    localStorage.removeItem('trina_cart'); // carrinho antigo (preços em Kwanza)
     const guardado = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
     return Array.isArray(guardado) ? guardado : [];
   } catch {
@@ -36,40 +32,42 @@ export const CartProvider = ({ children }) => {
     }
   }, [items]);
 
-  // produto: { nomeProduto, img, precoActual, precoAnterior?, tamanho?, cor? }
-  const addItem = (produto, quantidade = 1) => {
-    const id = [produto.nomeProduto, produto.tamanho || '', produto.cor || ''].join('|');
+  // addItem(produtoDaAPI, { size, color: {name, hex}, quantity })
+  const addItem = (product, { size = '', color = null, quantity = 1 } = {}) => {
+    const key = [product._id, size, color?.name || ''].join('|');
     setItems((prev) => {
-      const existente = prev.find((i) => i.id === id);
+      const existente = prev.find((i) => i.key === key);
       if (existente) {
-        return prev.map((i) => (i.id === id ? { ...i, quantidade: i.quantidade + quantidade } : i));
+        return prev.map((i) => (i.key === key ? { ...i, quantity: i.quantity + quantity } : i));
       }
       return [
         ...prev,
         {
-          id,
-          nome: produto.nomeProduto,
-          img: produto.img,
-          preco: parsePreco(produto.precoActual),
-          tamanho: produto.tamanho || '',
-          cor: produto.cor || '',
-          quantidade,
+          key,
+          productId: product._id,
+          slug: product.slug,
+          name: product.name,
+          image: product.images?.[0] || '',
+          price: product.price,
+          size,
+          color,
+          quantity,
         },
       ];
     });
   };
 
-  const removeItem = (id) => setItems((prev) => prev.filter((i) => i.id !== id));
+  const removeItem = (key) => setItems((prev) => prev.filter((i) => i.key !== key));
 
-  const updateQuantity = (id, quantidade) => {
-    if (quantidade < 1) return removeItem(id);
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, quantidade } : i)));
+  const updateQuantity = (key, quantity) => {
+    if (quantity < 1) return removeItem(key);
+    setItems((prev) => prev.map((i) => (i.key === key ? { ...i, quantity } : i)));
   };
 
   const clearCart = () => setItems([]);
 
-  const count = items.reduce((acc, i) => acc + i.quantidade, 0);
-  const total = items.reduce((acc, i) => acc + i.preco * i.quantidade, 0);
+  const count = items.reduce((acc, i) => acc + i.quantity, 0);
+  const total = items.reduce((acc, i) => acc + i.price * i.quantity, 0);
 
   return (
     <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clearCart, count, total }}>
