@@ -4,3 +4,6 @@ dist/
 build/
 .DS_Store
 *.log
+
+# Fotos enviadas pelo admin (ficam só no teu PC / servidor)
+server/uploads/

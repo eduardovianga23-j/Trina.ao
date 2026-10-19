@@ -5,7 +5,8 @@ import { faAngleDown, faUserAlt, faLongArrowAltLeft, faUserLarge } from '@fortaw
 import { faShoppingCart } from '@fortawesome/free-solid-svg-icons';
 import { faHeart } from '@fortawesome/free-regular-svg-icons';
 import { HiMenuAlt3, HiMenuAlt1 } from "react-icons/hi";
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../context/AuthContext';
 import CartIcon from './CartIcon';
 
 const Header = () => {
@@ -34,6 +35,8 @@ const Header = () => {
     return () => { document.body.style.overflow = ""; window.removeEventListener("keydown", onKey); };
   }, [menuOpen]);
   const navigate = useNavigate();
+  const { user, isAdmin, logout } = useAuth();
+  const handleLogout = () => { logout(); setMenuOpen(false); setIsHoverLogin(false); navigate('/'); };
 
   return (
     <>
@@ -56,27 +59,27 @@ const Header = () => {
                   <div className="grid grid-cols-3 gap-6 h-full p-12">
                     <ul>
                       <li className="font-bold mb-2 text-sm">Malhas</li>
-                      {["Casacos","Coletes","Blazzers"].map(i=><li key={i} onClick={()=>navigate("/shop")} className="text-sm cursor-pointer hover:text-red-800">{i}</li>)}
+                      {["Casacos","Coletes","Blazzers"].map(i=><li key={i} onClick={()=>navigate("/shop?category=roupas")} className="text-sm cursor-pointer hover:text-red-800">{i}</li>)}
                       <li className="font-bold mb-2 mt-8 text-sm">Calças</li>
-                      {["Calças de Ganga","Calçôes","Bermudas"].map(i=><li key={i} onClick={()=>navigate("/shop")} className="text-sm cursor-pointer hover:text-red-800">{i}</li>)}
+                      {["Calças de Ganga","Calçôes","Bermudas"].map(i=><li key={i} onClick={()=>navigate("/shop?category=roupas")} className="text-sm cursor-pointer hover:text-red-800">{i}</li>)}
                       <li className="font-bold mb-2 mt-8 text-sm">Calçados</li>
-                      {["Ténis","Chinelos","Saltos","Sapatília"].map(i=><li key={i} onClick={()=>navigate("/shop")} className="text-sm cursor-pointer hover:text-red-800">{i}</li>)}
+                      {["Ténis","Chinelos","Saltos","Sapatília"].map(i=><li key={i} onClick={()=>navigate("/shop?category=sapatos")} className="text-sm cursor-pointer hover:text-red-800">{i}</li>)}
                     </ul>
                     <ul>
                       <li className="font-bold mb-2 text-sm">Camisas e Blusas</li>
-                      {["T-shirts","Camisolas","Blusas"].map(i=><li key={i} onClick={()=>navigate("/shop")} className="text-sm cursor-pointer hover:text-red-800">{i}</li>)}
+                      {["T-shirts","Camisolas","Blusas"].map(i=><li key={i} onClick={()=>navigate("/shop?category=roupas")} className="text-sm cursor-pointer hover:text-red-800">{i}</li>)}
                       <li className="font-bold mb-2 mt-8 text-sm">Saias</li>
-                      {["Curtas","Midi","Comprida"].map(i=><li key={i} onClick={()=>navigate("/shop")} className="text-sm cursor-pointer hover:text-red-800">{i}</li>)}
+                      {["Curtas","Midi","Comprida"].map(i=><li key={i} onClick={()=>navigate("/shop?category=roupas")} className="text-sm cursor-pointer hover:text-red-800">{i}</li>)}
                       <li className="font-bold mb-2 mt-8 text-sm">PRAIA 🏖️</li>
-                      {["Biquinis","Fatos de banho","Tops e bodies"].map(i=><li key={i} onClick={()=>navigate("/shop")} className="text-sm cursor-pointer hover:text-red-800">{i}</li>)}
+                      {["Biquinis","Fatos de banho","Tops e bodies"].map(i=><li key={i} onClick={()=>navigate("/shop?category=praia")} className="text-sm cursor-pointer hover:text-red-800">{i}</li>)}
                     </ul>
                     <ul>
                       <li className="font-bold mb-2 text-sm">Vestidos</li>
-                      {["Vestidos Curtos","Vestidos Midi","Vestidos Compridos"].map(i=><li key={i} onClick={()=>navigate("/shop")} className="text-sm cursor-pointer hover:text-red-800">{i}</li>)}
+                      {["Vestidos Curtos","Vestidos Midi","Vestidos Compridos"].map(i=><li key={i} onClick={()=>navigate("/shop?category=roupas")} className="text-sm cursor-pointer hover:text-red-800">{i}</li>)}
                       <li className="font-bold mb-2 mt-8 text-sm">Conjuntos e Macacões</li>
                       <li className="font-bold mb-2 mt-4 text-sm">Roupa desportiva</li>
                       <li className="font-bold mb-2 mt-8 text-sm">Acessórios ⌚</li>
-                      {["Relógios","Anéis","Brincos","Fio de pescoço","Óculos"].map(i=><li key={i} onClick={()=>navigate("/shop")} className="text-sm cursor-pointer hover:text-red-800">{i}</li>)}
+                      {["Relógios","Anéis","Brincos","Fio de pescoço","Óculos"].map(i=><li key={i} onClick={()=>navigate("/shop?category=acessórios")} className="text-sm cursor-pointer hover:text-red-800">{i}</li>)}
                     </ul>
                   </div>
                   <div className='bg-shop h-full w-4/12'></div>
@@ -93,17 +96,33 @@ const Header = () => {
             <CartIcon />
             <a className="nav-icons" href="/shop"><FontAwesomeIcon icon={faHeart}/></a>
             <div className="relative" onMouseEnter={()=>setIsHoverLogin(true)} onMouseLeave={()=>setIsHoverLogin(false)}>
-              <a className="nav-icons" onClick={()=>navigate("/login")} href="/login"><FontAwesomeIcon icon={faUserAlt}/>
-                {isHoverLogin && (
-                  <div className='nav-icons-login w-36 h-20 fixed top-20 right-5 rounded bg-slate-50 shadow-[0_-4px_10px_rgba(0,0,0,0.6)] z-50'>
-                    <ul className="p-3 flex flex-col gap-1">
-                      <li className="text-black text-sm font-bold cursor-pointer">Login <FontAwesomeIcon icon={faUserLarge}/></li>
-                      <li className="text-black text-sm font-bold cursor-pointer">Meus pedidos <FontAwesomeIcon icon={faShoppingCart}/></li>
-                      <li className="text-black text-sm font-bold cursor-pointer">Sair <FontAwesomeIcon icon={faLongArrowAltLeft}/></li>
-                    </ul>
-                  </div>
-                )}
-              </a>
+              <Link className="nav-icons" to={user ? (isAdmin ? "/admin" : "/") : "/login"} aria-label={user ? `Conta de ${user.name}` : "Iniciar sessão"}>
+                <FontAwesomeIcon icon={faUserAlt}/>
+              </Link>
+              {isHoverLogin && (
+                <div className="absolute right-0 top-full pt-3 z-50">
+                  <ul className="w-52 p-2 flex flex-col rounded-md bg-white shadow-[0_4px_16px_rgba(0,0,0,0.25)] text-sm text-black">
+                    {user ? (
+                      <>
+                        <li className="px-3 py-2 border-b border-zinc-100 mb-1">
+                          <p className="font-bold truncate">{user.name}</p>
+                          <p className="text-xs text-zinc-500 truncate">{user.email}</p>
+                        </li>
+                        {isAdmin && (
+                          <li><Link to="/admin" className="block px-3 py-2 rounded hover:bg-zinc-100 font-semibold">Painel de administração</Link></li>
+                        )}
+                        <li><Link to="/cart" className="block px-3 py-2 rounded hover:bg-zinc-100">Carrinho <FontAwesomeIcon icon={faShoppingCart} className="ml-1"/></Link></li>
+                        <li><button onClick={handleLogout} className="w-full text-left px-3 py-2 rounded hover:bg-zinc-100">Sair <FontAwesomeIcon icon={faLongArrowAltLeft} className="ml-1"/></button></li>
+                      </>
+                    ) : (
+                      <>
+                        <li><Link to="/login" className="block px-3 py-2 rounded hover:bg-zinc-100 font-semibold">Iniciar sessão <FontAwesomeIcon icon={faUserLarge} className="ml-1"/></Link></li>
+                        <li><Link to="/register" className="block px-3 py-2 rounded hover:bg-zinc-100">Criar conta</Link></li>
+                      </>
+                    )}
+                  </ul>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -150,8 +169,20 @@ const Header = () => {
             ))}
           </nav>
           <div className="mt-auto px-6 pb-8 pt-4 flex flex-col gap-3">
-            <a href="/login" tabIndex={menuOpen ? 0 : -1} className="w-full py-3 text-center text-sm font-bold text-white bg-red-800 hover:bg-red-900 rounded-md">Iniciar sessão</a>
-            <a href="/register" tabIndex={menuOpen ? 0 : -1} className="w-full py-3 text-center text-sm font-bold text-red-900 border-2 border-red-800 rounded-md">Criar conta</a>
+            {user ? (
+              <>
+                <p className="text-sm text-zinc-600 text-center">Olá, <span className="font-bold text-black">{user.name}</span></p>
+                {isAdmin && (
+                  <Link to="/admin" onClick={() => setMenuOpen(false)} tabIndex={menuOpen ? 0 : -1} className="w-full py-3 text-center text-sm font-bold text-white bg-black rounded-md">Painel de administração</Link>
+                )}
+                <button onClick={handleLogout} tabIndex={menuOpen ? 0 : -1} className="w-full py-3 text-center text-sm font-bold text-red-900 border-2 border-red-800 rounded-md">Sair</button>
+              </>
+            ) : (
+              <>
+                <Link to="/login" onClick={() => setMenuOpen(false)} tabIndex={menuOpen ? 0 : -1} className="w-full py-3 text-center text-sm font-bold text-white bg-red-800 hover:bg-red-900 rounded-md">Iniciar sessão</Link>
+                <Link to="/register" onClick={() => setMenuOpen(false)} tabIndex={menuOpen ? 0 : -1} className="w-full py-3 text-center text-sm font-bold text-red-900 border-2 border-red-800 rounded-md">Criar conta</Link>
+              </>
+            )}
           </div>
         </div>
       </div>

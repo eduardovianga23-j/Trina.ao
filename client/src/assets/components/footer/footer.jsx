@@ -21,7 +21,7 @@ const Footer = () => (
       </div>
     </section>
     <div className="bg-black w-full py-4 px-4 flex justify-center items-center">
-      <h1 className='text-center text-xs text-zinc-400'>Copyright © {new Date().getFullYear()} Trina.ao. Todos os direitos reservados.</h1>
+      <p className='text-center text-xs text-zinc-400'>Copyright © {new Date().getFullYear()} Trina.ao. Todos os direitos reservados.</p>
     </div>
   </>
 );

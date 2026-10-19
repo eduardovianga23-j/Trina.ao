@@ -8,15 +8,17 @@ export const protect = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = await User.findById(decoded.id).select('-password');
+    // A conta pode ter sido apagada depois de o token ser criado
+    if (!req.user) return res.status(401).json({ message: 'Sessão inválida, entra novamente' });
     next();
   } catch {
-    res.status(401).json({ message: 'Token inválido' });
+    res.status(401).json({ message: 'Sessão expirada, entra novamente' });
   }
 };
 
 export const adminOnly = (req, res, next) => {
   if (req.user?.role !== 'admin') {
-    return res.status(403).json({ message: 'Acesso negado — apenas admins' });
+    return res.status(403).json({ message: 'Acesso negado — apenas administradores' });
   }
   next();
 };

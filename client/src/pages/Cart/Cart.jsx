@@ -4,7 +4,8 @@ import { faShoppingCart, faTrashCan } from "@fortawesome/free-solid-svg-icons";
 import Header from "../../assets/components/header/Header";
 import TopHeader from "../../assets/components/topheader/TopHeader";
 import Footer from "../../assets/components/footer/footer";
-import { useCart, formatPreco } from "../../context/CartContext";
+import { useCart } from "../../context/CartContext";
+import { formatEUR } from "../../utils/format";
 
 const Cart = () => {
   const { items, count, total, updateQuantity, removeItem } = useCart();
@@ -33,20 +34,20 @@ const Cart = () => {
               {/* Produtos */}
               <ul className="md:col-span-2 divide-y divide-zinc-200 border-y border-zinc-200">
                 {items.map((item) => (
-                  <li key={item.id} className="flex gap-3 sm:gap-4 py-4 sm:py-5">
-                    <img src={item.img} alt={item.nome} className="w-20 h-24 sm:w-24 sm:h-28 object-cover rounded-md bg-zinc-100 shrink-0" />
+                  <li key={item.key} className="flex gap-3 sm:gap-4 py-4 sm:py-5">
+                    <Link to={`/produto/${item.slug}`} className="shrink-0"><img src={item.image} alt={item.name} className="w-20 h-24 sm:w-24 sm:h-28 object-cover rounded-md bg-zinc-100" /></Link>
 
                     <div className="flex-1 min-w-0 flex flex-col">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <h2 className="font-bold text-sm leading-snug">{item.nome}</h2>
+                          <Link to={`/produto/${item.slug}`} className="font-bold text-sm leading-snug hover:underline">{item.name}</Link>
                           <p className="text-xs text-zinc-500 mt-1 capitalize">
-                            {[item.tamanho && `Tamanho ${item.tamanho}`, item.cor].filter(Boolean).join(" · ")}
+                            {[item.size && `Tamanho ${item.size}`, item.color?.name].filter(Boolean).join(" · ")}
                           </p>
                         </div>
                         <button
-                          onClick={() => removeItem(item.id)}
-                          aria-label={`Remover ${item.nome}`}
+                          onClick={() => removeItem(item.key)}
+                          aria-label={`Remover ${item.name}`}
                           className="w-9 h-9 -mt-2 -mr-2 flex items-center justify-center text-zinc-400 hover:text-red-700 shrink-0"
                         >
                           <FontAwesomeIcon icon={faTrashCan} />
@@ -56,15 +57,15 @@ const Cart = () => {
                       <div className="flex items-end justify-between gap-2 mt-auto pt-3">
                         <div className="flex items-center border border-zinc-300 rounded-sm">
                           <button
-                            onClick={() => updateQuantity(item.id, item.quantidade - 1)}
+                            onClick={() => updateQuantity(item.key, item.quantity - 1)}
                             aria-label="Diminuir quantidade"
                             className="w-9 h-9 flex items-center justify-center hover:bg-zinc-100"
                           >
                             −
                           </button>
-                          <span className="w-8 text-center text-sm font-semibold tabular-nums">{item.quantidade}</span>
+                          <span className="w-8 text-center text-sm font-semibold tabular-nums">{item.quantity}</span>
                           <button
-                            onClick={() => updateQuantity(item.id, item.quantidade + 1)}
+                            onClick={() => updateQuantity(item.key, item.quantity + 1)}
                             aria-label="Aumentar quantidade"
                             className="w-9 h-9 flex items-center justify-center hover:bg-zinc-100"
                           >
@@ -72,11 +73,11 @@ const Cart = () => {
                           </button>
                         </div>
                         <div className="text-right">
-                          {item.quantidade > 1 && (
-                            <p className="text-[11px] text-zinc-500">{formatPreco(item.preco)} Akz cada</p>
+                          {item.quantity > 1 && (
+                            <p className="text-[11px] text-zinc-500">{formatEUR(item.price)} cada</p>
                           )}
                           <p className="font-bold text-sm sm:text-base whitespace-nowrap">
-                            {formatPreco(item.preco * item.quantidade)} Akz
+                            {formatEUR(item.price * item.quantity)}
                           </p>
                         </div>
                       </div>
@@ -91,7 +92,7 @@ const Cart = () => {
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
                     <span className="text-zinc-600">Subtotal</span>
-                    <span className="tabular-nums">{formatPreco(total)} Akz</span>
+                    <span className="tabular-nums">{formatEUR(total)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-zinc-600">Envio</span>
@@ -99,7 +100,7 @@ const Cart = () => {
                   </div>
                   <div className="border-t border-zinc-200 pt-3 flex justify-between font-bold text-base">
                     <span>Total</span>
-                    <span className="text-red-800 tabular-nums">{formatPreco(total)} Akz</span>
+                    <span className="text-red-800 tabular-nums">{formatEUR(total)}</span>
                   </div>
                 </div>
                 {/* TODO: ligar a uma página de checkout ou ao WhatsApp quando estiver pronta */}
