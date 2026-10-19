@@ -55,6 +55,8 @@ export const uploadAPI = {
       onUploadProgress: (e) => onProgress?.(e.total ? Math.round((e.loaded / e.total) * 100) : 0),
     });
   },
+  // Apaga fotos enviadas que não chegaram a ser guardadas num produto
+  discard: (urls) => (urls.length ? api.delete('/uploads', { data: { urls } }).catch(() => {}) : Promise.resolve()),
 };
 
 export const orderAPI = {

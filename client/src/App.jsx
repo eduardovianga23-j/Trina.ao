@@ -11,6 +11,9 @@ import Login from './pages/Login/Login';
 import Register from './pages/Login/Register';
 import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
+import AdminRoute from './pages/Admin/AdminRoute';
+import AdminProducts from './pages/Admin/AdminProducts';
+import AdminProductForm from './pages/Admin/AdminProductForm';
 
 const NotFound = () => (
   <div className="min-h-screen flex flex-col items-center justify-center text-center px-4">
@@ -39,6 +42,10 @@ const App = () => {
         <Route path='/cart' element={<Cart />} />
         <Route path='/login' element={<Login />} />
         <Route path='/register' element={<Register />} />
+        {/* Área de administração (só admins) */}
+        <Route path='/admin' element={<AdminRoute><AdminProducts /></AdminRoute>} />
+        <Route path='/admin/novo' element={<AdminRoute><AdminProductForm /></AdminRoute>} />
+        <Route path='/admin/editar/:id' element={<AdminRoute><AdminProductForm /></AdminRoute>} />
         <Route path='*' element={<NotFound />} />
       </Routes>
     </BrowserRouter>

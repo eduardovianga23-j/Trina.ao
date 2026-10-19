@@ -1,8 +1,8 @@
 import express from 'express';
 import multer from 'multer';
 import { protect, adminOnly } from '../middleware/auth.js';
-import { saveImage } from '../utils/storage.js';
-import { MAX_IMAGES } from '../models/Product.js';
+import { saveImage, deleteImage } from '../utils/storage.js';
+import Product, { MAX_IMAGES } from '../models/Product.js';
 
 const router = express.Router();
 
@@ -33,6 +33,20 @@ router.post('/', protect, adminOnly, (req, res) => {
       res.status(e.status || 500).json({ message: e.status ? e.message : 'Erro ao guardar a foto' });
     }
   });
+});
+
+// DELETE /api/uploads  { urls: [...] }
+// Apaga fotos enviadas que acabaram por não ser usadas (ex.: removidas antes de guardar).
+// Nunca apaga uma foto que algum produto esteja a usar.
+router.delete('/', protect, adminOnly, async (req, res) => {
+  const urls = Array.isArray(req.body?.urls) ? req.body.urls.filter((u) => typeof u === 'string').slice(0, 20) : [];
+  let deleted = 0;
+  for (const url of urls) {
+    if (await Product.exists({ images: url })) continue;
+    await deleteImage(url);
+    deleted++;
+  }
+  res.json({ deleted });
 });
 
 export default router;
