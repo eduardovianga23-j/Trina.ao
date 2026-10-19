@@ -6,7 +6,8 @@ const userSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, lowercase: true },
     password: { type: String, required: true, minlength: 6 },
-    role: { type: String, enum: ['customer', 'admin'], default: 'customer' },
+    // customer = cliente · manager = gestor (só gere produtos) · admin = administrador principal (gere tudo, incluindo a equipa)
+    role: { type: String, enum: ['customer', 'manager', 'admin'], default: 'customer' },
     avatar: { type: String, default: '' },
     address: {
       street: String,

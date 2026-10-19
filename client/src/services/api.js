@@ -67,6 +67,13 @@ export const orderAPI = {
   updateStatus: (id, data) => api.put(`/orders/${id}/status`, data),
 };
 
+// Equipa da loja (só o administrador principal)
+export const teamAPI = {
+  list: () => api.get('/users/team'),
+  add: (email) => api.post('/users/team', { email }),
+  remove: (id) => api.delete(`/users/team/${id}`),
+};
+
 export const userAPI = {
   updateProfile: (data) => api.put('/users/profile', data),
   getAll: () => api.get('/users'),

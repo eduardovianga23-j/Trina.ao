@@ -14,6 +14,7 @@ import { AuthProvider } from './context/AuthContext';
 import AdminRoute from './pages/Admin/AdminRoute';
 import AdminProducts from './pages/Admin/AdminProducts';
 import AdminProductForm from './pages/Admin/AdminProductForm';
+import AdminTeam from './pages/Admin/AdminTeam';
 
 const NotFound = () => (
   <div className="min-h-screen flex flex-col items-center justify-center text-center px-4">
@@ -46,6 +47,7 @@ const App = () => {
         <Route path='/admin' element={<AdminRoute><AdminProducts /></AdminRoute>} />
         <Route path='/admin/novo' element={<AdminRoute><AdminProductForm /></AdminRoute>} />
         <Route path='/admin/editar/:id' element={<AdminRoute><AdminProductForm /></AdminRoute>} />
+        <Route path='/admin/equipa' element={<AdminRoute ownerOnly><AdminTeam /></AdminRoute>} />
         <Route path='*' element={<NotFound />} />
       </Routes>
     </BrowserRouter>

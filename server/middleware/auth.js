@@ -16,9 +16,18 @@ export const protect = async (req, res, next) => {
   }
 };
 
+// Só o administrador principal (ex.: gerir a equipa, encomendas)
 export const adminOnly = (req, res, next) => {
   if (req.user?.role !== 'admin') {
-    return res.status(403).json({ message: 'Acesso negado — apenas administradores' });
+    return res.status(403).json({ message: 'Acesso negado — apenas o administrador principal' });
+  }
+  next();
+};
+
+// Administrador principal ou gestor (ex.: criar, editar e apagar produtos)
+export const staffOnly = (req, res, next) => {
+  if (!['admin', 'manager'].includes(req.user?.role)) {
+    return res.status(403).json({ message: 'Acesso negado — apenas a equipa da loja' });
   }
   next();
 };

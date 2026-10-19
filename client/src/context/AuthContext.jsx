@@ -52,7 +52,15 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, checking, isAdmin: user?.role === 'admin' }}>
+    <AuthContext.Provider
+      value={{
+        user, login, register, logout, checking,
+        // isOwner = administrador principal · isStaff = principal ou gestor (podem entrar no painel)
+        isOwner: user?.role === 'admin',
+        isStaff: ['admin', 'manager'].includes(user?.role),
+        isAdmin: ['admin', 'manager'].includes(user?.role), // nome antigo, igual a isStaff
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
