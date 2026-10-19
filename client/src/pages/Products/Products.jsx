@@ -1,5 +1,6 @@
-import { useLocation, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useCart } from "../../context/CartContext";
 import Header from "../../assets/components/header/Header";
 import TopHeader from "../../assets/components/topheader/TopHeader";
 import Footer from "../../assets/components/footer/footer";
@@ -23,7 +24,6 @@ const OtherData = [
 
 const Products = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   // Se a página for aberta sem escolher um produto, mostra o primeiro como exemplo
   const { img, nomeProduto, percentagem, detalhesProduto2, precoAnterior, precoActual } = location.state || OtherData[0];
   const galleryImages = [img || otherImgs[0], otherImgs[1], otherImgs[2], otherImgs[3]];
@@ -32,6 +32,21 @@ const Products = () => {
   const [selectedOption, setSelectedOption] = useState("");
   const [productCount, setProductCount] = useState(1);
   const [selectedColor, setSelectedColor] = useState("vermelho");
+  const { addItem } = useCart();
+  const [sizeError, setSizeError] = useState(false);
+  const [added, setAdded] = useState(false);
+
+  // Ao abrir outro produto, volta ao estado inicial
+  useEffect(() => {
+    setSelectedImageIndex(0); setSelectedOption(""); setProductCount(1); setSizeError(false); setAdded(false);
+  }, [nomeProduto]);
+
+  const handleAddToCart = () => {
+    if (!selectedOption) { setSizeError(true); return; }
+    addItem({ img, nomeProduto, precoActual, precoAnterior, tamanho: selectedOption, cor: selectedColor }, productCount);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 2500);
+  };
   const colors = [{ name: "vermelho", colorCode: "#BB0320" }, { name: "Lilás", colorCode: "#BB0390" }, { name: "Marrom", colorCode: "#8B4513" }, { name: "Rosa", colorCode: "#FF69B4" }];
 
   return (
@@ -73,10 +88,11 @@ const Products = () => {
 
             <div className="mt-3 flex flex-col w-full max-w-[200px]">
               <label htmlFor="tamanho" className="font-semibold text-sm">Tamanhos</label>
-              <select id="tamanho" value={selectedOption} onChange={(e) => setSelectedOption(e.target.value)} className="px-4 py-2.5 mt-2 border text-base sm:text-sm rounded-sm bg-zinc-100 outline-none">
+              <select id="tamanho" value={selectedOption} onChange={(e) => { setSelectedOption(e.target.value); setSizeError(false); }} aria-invalid={sizeError} className={`px-4 py-2.5 mt-2 border text-base sm:text-sm rounded-sm bg-zinc-100 outline-none ${sizeError ? "border-red-700 ring-1 ring-red-700" : ""}`}>
                 <option value="" disabled>Selecione...</option>
                 {["36","37","38","39"].map(o => <option key={o} value={o}>{o}</option>)}
               </select>
+              {sizeError && <p className="text-xs text-red-700 font-semibold mt-1.5">Escolhe um tamanho primeiro.</p>}
             </div>
 
             <div className="mt-5">
@@ -108,9 +124,20 @@ const Products = () => {
                 {percentagem !== 0 && percentagem !== undefined && <span className="text-sm bg-yellow-400 px-1.5 rounded-sm">{percentagem}%</span>}
               </div>
             </div>
-            <button onClick={() => navigate("/cart")} className="mt-6 w-full sm:w-auto py-3 px-10 bg-black hover:bg-zinc-800 text-white text-sm font-semibold rounded-sm">
-              Adicionar ao carrinho
-            </button>
+            <div className="mt-6 flex flex-col sm:flex-row sm:items-center gap-3">
+              <button
+                onClick={handleAddToCart}
+                className={`w-full sm:w-auto py-3 px-10 text-white text-sm font-semibold rounded-sm transition-colors
+                            ${added ? "bg-green-700" : "bg-black hover:bg-zinc-800"}`}
+              >
+                {added ? "✓ Adicionado ao carrinho" : "Adicionar ao carrinho"}
+              </button>
+              {added && (
+                <Link to="/cart" className="text-center text-sm font-semibold underline underline-offset-4 hover:text-red-800">
+                  Ver carrinho
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </div>

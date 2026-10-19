@@ -35,3 +35,20 @@
   background-position: center; background-size: cover;
   background-image: url('../../../img/TRINA/back3.jpg');
 }
+
+/* Bolinha do carrinho */
+.cart-badge {
+  background-color: #7f1d1d;
+  box-shadow: 0 0 0 2px #fff;           /* contorno branco para destacar do ícone */
+  font-variant-numeric: tabular-nums;
+  transition: box-shadow 0.3s;
+}
+.header-bg .cart-badge { box-shadow: 0 0 0 2px #000; } /* contorno preto quando o cabeçalho fica preto */
+.cart-badge-pulse { animation: cart-pop 0.45s ease-out; }
+@keyframes cart-pop {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.45); }
+  70%  { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) { .cart-badge-pulse { animation: none; } }
