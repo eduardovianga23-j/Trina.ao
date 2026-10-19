@@ -52,3 +52,7 @@
   100% { transform: scale(1); }
 }
 @media (prefers-reduced-motion: reduce) { .cart-badge-pulse { animation: none; } }
+
+/* Logótipo: vermelho no cabeçalho branco, branco quando o cabeçalho fica preto */
+.logo-trina { color: #AA0001; transition: color 0.3s ease; }
+.header-bg .logo-trina { color: #fff; }
