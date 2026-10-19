@@ -6,8 +6,9 @@ import { faShoppingCart } from '@fortawesome/free-solid-svg-icons';
 import { faHeart } from '@fortawesome/free-regular-svg-icons';
 import { HiMenuAlt3, HiMenuAlt1 } from "react-icons/hi";
 import { useNavigate } from 'react-router-dom';
+import CartIcon from './CartIcon';
 
-const Header = ({ itemCount = 0 }) => {
+const Header = () => {
   const [color, setColor] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -40,10 +41,7 @@ const Header = ({ itemCount = 0 }) => {
         <div className="flex justify-between w-[92%] lg:w-[80%] items-center">
           <a className="text-xl text-red-900" href="/"> Trina .</a>
           <div className="flex items-center gap-3 sm:gap-4 lg:hidden">
-            <div className="relative">
-              <a className="nav-icons" href="/shop"><FontAwesomeIcon icon={faShoppingCart} /></a>
-              <div className="nav-icons-bar absolute rounded-full shadow-md min-h-5 min-w-5 bottom-5 left-4 text-xs flex items-center text-white cursor-pointer font-semibold">{itemCount}</div>
-            </div>
+            <CartIcon />
             <a className="nav-icons" href="/shop"><FontAwesomeIcon icon={faHeart} /></a>
             <button onClick={toggleMenu} aria-label="Abrir menu" aria-expanded={menuOpen} className="p-1 -mr-1">
               {menuOpen ? <HiMenuAlt1 className="menu-c cursor-pointer" size={30}/> : <HiMenuAlt3 className="menu-c cursor-pointer" size={30}/>}
@@ -92,10 +90,7 @@ const Header = ({ itemCount = 0 }) => {
           </nav>
 
           <div className="hidden lg:flex items-center gap-5">
-            <div className="relative">
-              <a className="nav-icons" href="/shop"><FontAwesomeIcon icon={faShoppingCart}/></a>
-              <div className="nav-icons-bar absolute rounded-full min-h-5 min-w-5 bottom-5 left-3 text-xs flex items-center text-white font-semibold">{itemCount}</div>
-            </div>
+            <CartIcon />
             <a className="nav-icons" href="/shop"><FontAwesomeIcon icon={faHeart}/></a>
             <div className="relative" onMouseEnter={()=>setIsHoverLogin(true)} onMouseLeave={()=>setIsHoverLogin(false)}>
               <a className="nav-icons" onClick={()=>navigate("/login")} href="/login"><FontAwesomeIcon icon={faUserAlt}/>

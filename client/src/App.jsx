@@ -9,6 +9,7 @@ import Shop from './pages/Shop/Shop';
 import Products from "./pages/Products/Products";
 import Login from './pages/Login/Login';
 import Register from './pages/Login/Register';
+import { CartProvider } from './context/CartContext';
 
 const App = () => {
   useEffect(() => {
@@ -17,6 +18,7 @@ const App = () => {
   }, []);
 
   return (
+    <CartProvider>
     <BrowserRouter>
       <Routes>
         <Route path='/' element={<Home />} />
@@ -27,6 +29,7 @@ const App = () => {
         <Route path='/register' element={<Register />} />
       </Routes>
     </BrowserRouter>
+    </CartProvider>
   )
 }
 
