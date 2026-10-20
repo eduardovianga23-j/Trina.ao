@@ -28,7 +28,7 @@ const baseUrl = () =>
   // INVOICEXPRESS_API_URL só é usado nos testes automáticos
   (process.env.INVOICEXPRESS_API_URL || `https://${process.env.INVOICEXPRESS_ACCOUNT}.app.invoicexpress.com`).replace(/\/+$/, '');
 
-const vatRate = () => {
+export const vatRate = () => {
   const n = Number(process.env.INVOICE_VAT_RATE);
   return Number.isFinite(n) && n >= 0 && n < 100 ? n : 23;
 };

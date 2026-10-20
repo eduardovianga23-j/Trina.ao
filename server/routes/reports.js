@@ -3,11 +3,14 @@ import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import { protect, requirePerm } from '../middleware/auth.js';
 import { ZONES } from '../utils/shipping.js';
+import { vatRate } from '../utils/invoicing.js';
 
 /*
   Estatísticas de vendas e exportação de encomendas.
     GET /api/reports/summary?from=2026-10-01&to=2026-10-31   (permissão "Estatísticas")
     GET /api/reports/orders.csv?from=...&to=...               (permissão "Encomendas") → abre no Excel
+    GET /api/reports/accounting.csv?from=...&to=...           (permissão "Estatísticas") → para o contabilista,
+                                                               só valores e faturas, sem dados pessoais dos clientes
 
   As datas são dias de Portugal (hora de Lisboa). Conta só encomendas pagas e não canceladas.
 */
@@ -241,6 +244,72 @@ router.get('/orders.csv', protect, requirePerm('orders'), async (req, res) => {
     const csv = `﻿${[header.map(cell).join(';'), ...rows].join('\r\n')}\r\n`;
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="encomendas-${range.from}-a-${range.to}.csv"`);
+    res.setHeader('Cache-Control', 'no-store');
+    res.send(csv);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Erro no servidor' });
+  }
+});
+
+// ---------- Exportação para a contabilidade (sem dados pessoais) ----------
+/*
+  Uma linha por encomenda paga, com o valor sem IVA, o IVA e o total, e o número da fatura.
+  Não leva nomes, emails, telefones, moradas nem NIF: o contabilista encontra tudo isso na fatura (InvoiceXpress).
+  As encomendas canceladas depois de pagas aparecem como "Reembolsada" (confirmar a nota de crédito).
+*/
+router.get('/accounting.csv', protect, requirePerm('reports'), async (req, res) => {
+  try {
+    const range = readRange(req.query);
+    if (range.error) return res.status(400).json({ message: range.error });
+    const orders = await Order.find({
+      paymentStatus: 'paid',
+      $or: [{ paidAt: { $gte: range.start, $lt: range.end } }, { paidAt: { $exists: false }, createdAt: { $gte: range.start, $lt: range.end } }],
+    })
+      .select('items subtotal discount couponCode shippingCost shippingZone total paymentMethod paidAt createdAt orderStatus invoice')
+      .sort({ paidAt: 1, createdAt: 1 })
+      .limit(20000)
+      .lean();
+
+    const rate = vatRate();
+    const cents = (n) => Math.round((Number(n) || 0) * 100);
+    const header = ['Nº encomenda', 'Data do pagamento', 'Situação', 'Fatura', 'Método de pagamento', 'Zona', 'Peças',
+      'Produtos (€)', 'Desconto (€)', 'Código de desconto', 'Portes (€)', `Valor sem IVA (€)`, `IVA ${rate}% (€)`, 'Total pago (€)'];
+    const sum = { items: 0, products: 0, discount: 0, shipping: 0, base: 0, vat: 0, total: 0 };
+    const rows = orders.map((o) => {
+      const refunded = o.orderStatus === 'cancelled';
+      const totalC = cents(o.total);
+      const baseC = Math.round(totalC / (1 + rate / 100));
+      const vatC = totalC - baseC;
+      const items = o.items.reduce((n, i) => n + i.quantity, 0);
+      if (!refunded) {
+        sum.items += items; sum.products += cents(o.subtotal); sum.discount += cents(o.discount);
+        sum.shipping += cents(o.shippingCost); sum.base += baseC; sum.vat += vatC; sum.total += totalC;
+      }
+      return [
+        String(o._id).slice(-6).toUpperCase(),
+        dateTime(o.paidAt || o.createdAt),
+        refunded ? 'Reembolsada' : 'Paga',
+        o.invoice?.number || (o.invoice?.status === 'failed' ? 'Falhou — ver painel' : 'Por emitir'),
+        METHOD[o.paymentMethod] || o.paymentMethod || '',
+        ZONES[o.shippingZone || 'continente'],
+        items,
+        money(o.subtotal),
+        money(o.discount),
+        o.couponCode || '',
+        money(o.shippingCost),
+        money(baseC / 100),
+        money(vatC / 100),
+        money(totalC / 100),
+      ].map(cell).join(';');
+    });
+    const totalRow = ['TOTAL (sem reembolsadas)', '', `${orders.filter((o) => o.orderStatus !== 'cancelled').length} encomendas`, '', '', '', sum.items,
+      money(sum.products / 100), money(sum.discount / 100), '', money(sum.shipping / 100), money(sum.base / 100), money(sum.vat / 100), money(sum.total / 100)]
+      .map(cell).join(';');
+    const note = cell(`Período: ${range.from} a ${range.to}. IVA calculado à taxa de ${rate}% sobre o total pago (portes incluídos). Os valores oficiais são os das faturas no InvoiceXpress.`);
+    const csv = `\uFEFF${[header.map(cell).join(';'), ...rows, '', totalRow, '', note].join('\r\n')}\r\n`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="contabilidade-${range.from}-a-${range.to}.csv"`);
     res.setHeader('Cache-Control', 'no-store');
     res.send(csv);
   } catch (err) {

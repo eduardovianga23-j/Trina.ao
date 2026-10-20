@@ -3,7 +3,7 @@ export const PERMISSIONS = [
   { key: 'products', label: 'Produtos', path: '/admin', description: 'Criar, editar e apagar produtos, stock e promoções' },
   { key: 'orders', label: 'Encomendas', path: '/admin/encomendas', description: 'Ver encomendas e marcar como enviada ou entregue' },
   { key: 'reviews', label: 'Avaliações', path: '/admin/avaliacoes', description: 'Ver e apagar avaliações de clientes' },
-  { key: 'reports', label: 'Estatísticas', path: '/admin/estatisticas', description: 'Ver as vendas, a faturação e os mais vendidos' },
+  { key: 'reports', label: 'Estatísticas', path: '/admin/estatisticas', description: 'Ver as vendas e exportar para a contabilidade (sem dados pessoais dos clientes)' },
 ];
 
 export const permsOf = (user) => {
