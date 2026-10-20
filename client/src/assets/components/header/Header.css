@@ -1,7 +1,7 @@
 .header {
   height: 70px; width: 100%; left: 0; top: 2.5rem;
   position: fixed; padding: 0 1.2rem; /* sem margem vertical: o logótipo usa a altura toda */ transition: 0.3s ease-in-out;
-  overflow: hidden; z-index: 20; display: flex;
+  z-index: 20; display: flex; /* sem overflow:hidden, para o menu da conta não ficar cortado */
   align-items: center; justify-content: center;
   background: #fff; border-bottom: solid 1px rgba(0,0,0,0.108);
 }
@@ -56,3 +56,9 @@
 /* Logótipo: vermelho no cabeçalho branco, branco quando o cabeçalho fica preto */
 .logo-trina { color: #AA0001; transition: color 0.3s ease; }
 .header-bg .logo-trina { color: #fff; }
+
+/* Botão "Entrar" e foto da conta */
+.account-login { color: #18181b; border-color: #d4d4d8; }
+.account-login:hover { border-color: #7f1d1d; color: #7f1d1d; }
+.header-bg .account-login { color: #fff; border-color: #52525b; }
+.header-bg .account-login:hover { border-color: #fff; color: #fff; }

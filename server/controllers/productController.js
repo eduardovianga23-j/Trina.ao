@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import Product, { MAX_RELATED } from '../models/Product.js';
+import User from '../models/User.js';
 import { deleteImage } from '../utils/storage.js';
 
 const isId = (v) => mongoose.isValidObjectId(v);
@@ -61,6 +62,19 @@ export const getProducts = async (req, res) => {
       Product.countDocuments(query),
     ]);
     res.json({ products, total, page, pages: Math.ceil(total / limit) });
+  } catch (err) {
+    sendError(res, err);
+  }
+};
+
+// GET /api/products/by-ids?ids=a,b,c  (público: ex. a lista de favoritos de quem não tem sessão)
+export const getProductsByIds = async (req, res) => {
+  try {
+    const ids = String(req.query.ids || '').split(',').filter(isId).slice(0, 100);
+    if (!ids.length) return res.json([]);
+    const products = await Product.find({ _id: { $in: ids }, active: true }).select('-reviews');
+    // mantém a ordem pedida
+    res.json(ids.map((id) => products.find((p) => String(p._id) === id)).filter(Boolean));
   } catch (err) {
     sendError(res, err);
   }
@@ -196,6 +210,7 @@ export const deleteProduct = async (req, res) => {
     if (!product) return res.status(404).json({ message: 'Produto não encontrado' });
 
     await Product.updateMany({ related: product._id }, { $pull: { related: product._id } });
+    await User.updateMany({ favorites: product._id }, { $pull: { favorites: product._id } });
     await deleteUnusedImages(product.images, product._id);
     res.json({ message: 'Produto eliminado' });
   } catch (err) {

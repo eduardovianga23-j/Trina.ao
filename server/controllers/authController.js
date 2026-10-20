@@ -59,7 +59,10 @@ export const login = async (req, res) => {
 };
 
 export const getMe = async (req, res) => {
-  res.json(req.user);
+  const u = await User.findById(req.user._id).select('-password -favorites').lean();
+  if (!u) return res.status(404).json({ message: 'Conta não encontrada' });
+  const { googleId, ...rest } = u;
+  res.json({ ...rest, google: Boolean(googleId) }); // não expõe o identificador Google, só se está ligado
 };
 
 // ---------- Google ----------

@@ -1,20 +1,22 @@
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import './Header.css';
 import { useEffect, useState } from 'react';
-import { faAngleDown, faUserAlt, faLongArrowAltLeft, faUserLarge } from '@fortawesome/free-solid-svg-icons';
-import { faShoppingCart } from '@fortawesome/free-solid-svg-icons';
-import { faHeart } from '@fortawesome/free-regular-svg-icons';
+import { faAngleDown } from '@fortawesome/free-solid-svg-icons';
+import { FaUserCog, FaBoxOpen, FaHeart, FaTools, FaChevronRight } from 'react-icons/fa';
 import { HiMenuAlt3, HiMenuAlt1 } from "react-icons/hi";
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import CartIcon from './CartIcon';
+import FavoritesIcon from './FavoritesIcon';
+import AccountMenu from './AccountMenu';
+import UserAvatar from '../ui/UserAvatar';
+import { useFavorites } from '../../../context/FavoritesContext';
 import Logo from '../ui/Logo';
 
 const Header = () => {
   const [color, setColor] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const [isHoverLogin, setIsHoverLogin] = useState(false);
 
   const changeColor = () => {
     setColor(window.scrollY >= 80);
@@ -37,7 +39,8 @@ const Header = () => {
   }, [menuOpen]);
   const navigate = useNavigate();
   const { user, isStaff, logout } = useAuth();
-  const handleLogout = () => { logout(); setMenuOpen(false); setIsHoverLogin(false); navigate('/'); };
+  const { count: favCount } = useFavorites();
+  const handleLogout = () => { logout(); setMenuOpen(false); navigate('/'); };
 
   return (
     <>
@@ -48,7 +51,7 @@ const Header = () => {
           </Link>
           <div className="flex items-center gap-3 sm:gap-4 lg:hidden">
             <CartIcon />
-            <a className="nav-icons" href="/shop"><FontAwesomeIcon icon={faHeart} /></a>
+            <FavoritesIcon />
             <button onClick={toggleMenu} aria-label="Abrir menu" aria-expanded={menuOpen} className="p-1 -mr-1">
               {menuOpen ? <HiMenuAlt1 className="menu-c cursor-pointer" size={30}/> : <HiMenuAlt3 className="menu-c cursor-pointer" size={30}/>}
             </button>
@@ -95,38 +98,10 @@ const Header = () => {
             <a className="nav-links" href="/#">NOVIDADES 🔥</a>
           </nav>
 
-          <div className="hidden lg:flex items-center gap-5">
+          <div className="hidden lg:flex items-center gap-4">
             <CartIcon />
-            <a className="nav-icons" href="/shop"><FontAwesomeIcon icon={faHeart}/></a>
-            <div className="relative" onMouseEnter={()=>setIsHoverLogin(true)} onMouseLeave={()=>setIsHoverLogin(false)}>
-              <Link className="nav-icons" to={user ? (isStaff ? "/admin" : "/") : "/login"} aria-label={user ? `Conta de ${user.name}` : "Iniciar sessão"}>
-                <FontAwesomeIcon icon={faUserAlt}/>
-              </Link>
-              {isHoverLogin && (
-                <div className="absolute right-0 top-full pt-3 z-50">
-                  <ul className="w-52 p-2 flex flex-col rounded-md bg-white shadow-[0_4px_16px_rgba(0,0,0,0.25)] text-sm text-black">
-                    {user ? (
-                      <>
-                        <li className="px-3 py-2 border-b border-zinc-100 mb-1">
-                          <p className="font-bold truncate">{user.name}</p>
-                          <p className="text-xs text-zinc-500 truncate">{user.email}</p>
-                        </li>
-                        {isStaff && (
-                          <li><Link to="/admin" className="block px-3 py-2 rounded hover:bg-zinc-100 font-semibold">Painel de administração</Link></li>
-                        )}
-                        <li><Link to="/cart" className="block px-3 py-2 rounded hover:bg-zinc-100">Carrinho <FontAwesomeIcon icon={faShoppingCart} className="ml-1"/></Link></li>
-                        <li><button onClick={handleLogout} className="w-full text-left px-3 py-2 rounded hover:bg-zinc-100">Sair <FontAwesomeIcon icon={faLongArrowAltLeft} className="ml-1"/></button></li>
-                      </>
-                    ) : (
-                      <>
-                        <li><Link to="/login" className="block px-3 py-2 rounded hover:bg-zinc-100 font-semibold">Iniciar sessão <FontAwesomeIcon icon={faUserLarge} className="ml-1"/></Link></li>
-                        <li><Link to="/register" className="block px-3 py-2 rounded hover:bg-zinc-100">Criar conta</Link></li>
-                      </>
-                    )}
-                  </ul>
-                </div>
-              )}
-            </div>
+            <FavoritesIcon />
+            <AccountMenu />
           </div>
         </div>
       </header>
@@ -176,10 +151,27 @@ const Header = () => {
           <div className="mt-auto px-6 pb-8 pt-4 flex flex-col gap-3">
             {user ? (
               <>
-                <p className="text-sm text-zinc-600 text-center">Olá, <span className="font-bold text-black">{user.name}</span></p>
-                {isStaff && (
-                  <Link to="/admin" onClick={() => setMenuOpen(false)} tabIndex={menuOpen ? 0 : -1} className="w-full py-3 text-center text-sm font-bold text-white bg-black rounded-md">Painel de administração</Link>
-                )}
+                <div className="flex items-center gap-3 rounded-xl bg-white border border-zinc-200 p-3">
+                  <UserAvatar user={user} size={44} />
+                  <div className="min-w-0">
+                    <p className="text-sm text-zinc-600">Olá, <span className="font-bold text-black">{user.name}</span></p>
+                    <p className="text-xs text-zinc-500 truncate">{user.email}</p>
+                  </div>
+                </div>
+                <nav className="rounded-xl bg-white border border-zinc-200 divide-y divide-zinc-100 overflow-hidden" aria-label="A minha conta">
+                  {[
+                    ['/conta', 'Minha conta', FaUserCog],
+                    ['/conta/encomendas', 'As minhas encomendas', FaBoxOpen],
+                    ['/conta/favoritos', `Favoritos${favCount ? ` (${favCount})` : ''}`, FaHeart],
+                    ...(isStaff ? [['/admin', 'Painel de administração', FaTools]] : []),
+                  ].map(([to, label, Icon]) => (
+                    <Link key={to} to={to} onClick={() => setMenuOpen(false)} tabIndex={menuOpen ? 0 : -1}
+                      className="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-zinc-800 hover:bg-zinc-50">
+                      <Icon className="text-red-800" aria-hidden="true" /> {label}
+                      <FaChevronRight className="ml-auto text-xs text-zinc-400" aria-hidden="true" />
+                    </Link>
+                  ))}
+                </nav>
                 <button onClick={handleLogout} tabIndex={menuOpen ? 0 : -1} className="w-full py-3 text-center text-sm font-bold text-red-900 border-2 border-red-800 rounded-md">Sair</button>
               </>
             ) : (
