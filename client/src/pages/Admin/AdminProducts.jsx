@@ -108,6 +108,14 @@ const AdminProducts = () => {
                 )}
                 <span className="text-[10px] text-zinc-500 px-1.5 py-0.5 rounded border border-zinc-200">{p.images.length} fotos</span>
                 {p.hasColors && <span className="text-[10px] text-zinc-500 px-1.5 py-0.5 rounded border border-zinc-200">{p.colors.length} cores</span>}
+                {p.trackStock && (() => {
+                  const out = p.variants.filter((v) => v.stock === 0).length;
+                  return p.stock === 0
+                    ? <span className="text-[10px] font-bold uppercase bg-red-100 text-red-800 px-1.5 py-0.5 rounded">Esgotado</span>
+                    : <span className={`text-[10px] px-1.5 py-0.5 rounded border ${p.stock <= 3 || out ? 'border-amber-300 bg-amber-50 text-amber-900' : 'border-zinc-200 text-zinc-500'}`}>
+                        Stock {p.stock}{out ? ` · ${out} esgotado${out > 1 ? 's' : ''}` : ''}
+                      </span>;
+                })()}
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 shrink-0">

@@ -3,6 +3,7 @@ import multer from 'multer';
 import { protect, staffOnly } from '../middleware/auth.js';
 import { saveImage, deleteImage } from '../utils/storage.js';
 import Product, { MAX_IMAGES } from '../models/Product.js';
+import Review from '../models/Review.js';
 
 const router = express.Router();
 
@@ -42,7 +43,7 @@ router.delete('/', protect, staffOnly, async (req, res) => {
   const urls = Array.isArray(req.body?.urls) ? req.body.urls.filter((u) => typeof u === 'string').slice(0, 20) : [];
   let deleted = 0;
   for (const url of urls) {
-    if (await Product.exists({ images: url })) continue;
+    if ((await Product.exists({ images: url })) || (await Review.exists({ photos: url }))) continue;
     await deleteImage(url);
     deleted++;
   }

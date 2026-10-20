@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import Product, { MAX_RELATED } from '../models/Product.js';
 import User from '../models/User.js';
+import Review from '../models/Review.js';
 import { deleteImage } from '../utils/storage.js';
 
 const isId = (v) => mongoose.isValidObjectId(v);
@@ -9,12 +10,17 @@ const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // Só estes campos podem ser enviados pelo admin (evita alterar rating, vendas, etc.)
 const pickProductFields = (body) => {
   const out = {};
-  for (const k of ['name', 'description', 'category', 'images', 'sizes', 'hasColors', 'colors', 'related', 'stock', 'featured', 'active']) {
+  for (const k of ['name', 'description', 'category', 'images', 'sizes', 'hasColors', 'colors', 'related', 'trackStock', 'variants', 'featured', 'active']) {
     if (body[k] !== undefined) out[k] = body[k];
   }
   if (body.price !== undefined) out.price = Number(body.price);
   if (body.originalPrice !== undefined) {
     out.originalPrice = body.originalPrice === '' || body.originalPrice === null ? undefined : Number(body.originalPrice);
+  }
+  if (out.variants !== undefined) {
+    out.variants = Array.isArray(out.variants)
+      ? out.variants.slice(0, 300).map((v) => ({ size: String(v?.size ?? ''), color: String(v?.color ?? ''), stock: Number(v?.stock) || 0 }))
+      : [];
   }
   if (out.related) out.related = [...new Set(out.related.map(String))].filter(isId).slice(0, MAX_RELATED);
   return out;
@@ -95,7 +101,7 @@ export const getFeaturedProducts = async (req, res) => {
 // GET /api/products/slug/:slug
 export const getProductBySlug = async (req, res) => {
   try {
-    const product = await Product.findOne({ slug: String(req.params.slug), active: true });
+    const product = await Product.findOne({ slug: String(req.params.slug), active: true }).select('-reviews');
     if (!product) return res.status(404).json({ message: 'Produto não encontrado' });
     res.json(product);
   } catch (err) {
@@ -211,32 +217,12 @@ export const deleteProduct = async (req, res) => {
 
     await Product.updateMany({ related: product._id }, { $pull: { related: product._id } });
     await User.updateMany({ favorites: product._id }, { $pull: { favorites: product._id } });
+    // Apaga as avaliações do produto e as suas fotos
+    const reviews = await Review.find({ product: product._id }).select('photos');
+    await Review.deleteMany({ product: product._id });
+    await Promise.all(reviews.flatMap((r) => r.photos).map(deleteImage));
     await deleteUnusedImages(product.images, product._id);
     res.json({ message: 'Produto eliminado' });
-  } catch (err) {
-    sendError(res, err);
-  }
-};
-
-// POST /api/products/:id/reviews
-export const addReview = async (req, res) => {
-  try {
-    const rating = Number(req.body.rating);
-    const comment = String(req.body.comment || '').trim();
-    if (!(rating >= 1 && rating <= 5) || !comment) return res.status(400).json({ message: 'Avaliação inválida' });
-
-    if (!isId(req.params.id)) return res.status(404).json({ message: 'Produto não encontrado' });
-    const product = await Product.findById(req.params.id);
-    if (!product) return res.status(404).json({ message: 'Produto não encontrado' });
-
-    if (product.reviews.some((r) => String(r.user) === String(req.user._id))) {
-      return res.status(400).json({ message: 'Já avaliaste este produto' });
-    }
-    product.reviews.push({ user: req.user._id, name: req.user.name, rating, comment: comment.slice(0, 1000) });
-    product.numReviews = product.reviews.length;
-    product.rating = product.reviews.reduce((acc, r) => acc + r.rating, 0) / product.reviews.length;
-    await product.save();
-    res.status(201).json({ message: 'Avaliação adicionada' });
   } catch (err) {
     sendError(res, err);
   }

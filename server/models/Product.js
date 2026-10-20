@@ -88,6 +88,21 @@ const productSchema = new mongoose.Schema(
       },
     },
 
+    /*
+      Stock por tamanho e cor. Só é controlado se trackStock = true
+      (sem controlo, o produto pode ser sempre comprado).
+      variants: uma linha por combinação, ex.: { size: 'M', color: 'Preto', stock: 3 }
+      ('' quando o produto não tem tamanhos ou cores). stock = total de todas as linhas.
+    */
+    trackStock: { type: Boolean, default: false },
+    variants: {
+      type: [new mongoose.Schema({
+        size: { type: String, default: '' },
+        color: { type: String, default: '' },
+        stock: { type: Number, default: 0, min: [0, 'O stock não pode ser negativo'] },
+      }, { _id: false })],
+      default: [],
+    },
     stock: { type: Number, default: 0, min: 0 },
     featured: { type: Boolean, default: false },
     active: { type: Boolean, default: true }, // false = escondido da loja
@@ -116,6 +131,21 @@ productSchema.pre('validate', async function (next) {
 
   // Remove tamanhos repetidos ou vazios
   this.sizes = [...new Set((this.sizes || []).map((s) => String(s).trim()).filter(Boolean))];
+
+  // Stock: uma linha para cada combinação de tamanho e cor (mantém as quantidades já escritas)
+  if (this.trackStock) {
+    const sizes = this.sizes.length ? this.sizes : [''];
+    const colors = this.hasColors && this.colors.length ? this.colors.map((c) => c.name) : [''];
+    const old = new Map((this.variants || []).map((v) => [`${v.size}|${v.color}`, v.stock]));
+    this.variants = colors.flatMap((color) => sizes.map((size) => {
+      const n = Math.floor(Number(old.get(`${size}|${color}`)) || 0);
+      return { size, color, stock: Math.max(0, n) };
+    }));
+    this.stock = this.variants.reduce((acc, v) => acc + v.stock, 0);
+  } else {
+    this.variants = [];
+    this.stock = 0;
+  }
 
   // Um produto não pode sugerir-se a si próprio
   this.related = (this.related || []).filter((id) => String(id) !== String(this._id));

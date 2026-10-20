@@ -29,6 +29,7 @@ const suggestedPreset = (category) => (category === 'sapatos' ? 'Calçado' : 'Ro
 const EMPTY = {
   name: '', description: '', category: '', price: '', onSale: false, discount: '',
   images: [], sizes: [], hasColors: false, colors: [], related: [], featured: false, active: true,
+  trackStock: true, stock: {}, // stock: { "M|<chave da cor>": "3" }
 };
 
 // Cada cor tem uma chave só para o formulário (não é guardada)
@@ -92,6 +93,9 @@ const AdminProductForm = () => {
   // Fotos enviadas nesta edição e ainda não guardadas (para limpar se não forem usadas)
   const newUploads = useRef([]);
   const savedImages = useRef([]);
+  // Preço guardado: se o admin não mexer no preço nem no desconto, mantém-se exatamente igual
+  // (a percentagem mostrada é arredondada e não deve alterar o preço ao guardar)
+  const loadedPrice = useRef(null);
 
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -102,6 +106,8 @@ const AdminProductForm = () => {
       .getById(id)
       .then(({ data }) => {
         savedImages.current = data.images;
+        loadedPrice.current = data;
+        const colors = data.colors.map((c) => newColor({ name: c.name, hex: c.hex, image: c.image || '' }));
         setForm({
           name: data.name, description: data.description, category: data.category,
           // Em promoção: o preço normal é o preço anterior, e o desconto calcula-se a partir dos dois
@@ -109,8 +115,12 @@ const AdminProductForm = () => {
             ? { price: String(data.originalPrice), onSale: true, discount: String(Math.round((1 - data.price / data.originalPrice) * 100)) }
             : { price: String(data.price), onSale: false, discount: '' }),
           images: data.images, sizes: data.sizes, hasColors: data.hasColors,
-          colors: data.colors.map((c) => newColor({ name: c.name, hex: c.hex, image: c.image || '' })),
-          related: data.related.map(String), featured: data.featured, active: data.active,
+          colors, related: data.related.map(String), featured: data.featured, active: data.active,
+          trackStock: Boolean(data.trackStock),
+          // O stock guarda-se pela chave da cor no formulário (assim mudar o nome da cor não perde as quantidades)
+          stock: Object.fromEntries((data.variants || []).map((v) => [
+            `${v.size}|${v.color ? colors.find((c) => c.name === v.color)?.key || '?' : ''}`, String(v.stock),
+          ])),
         });
       })
       .catch((err) => setErrors([apiError(err, 'Produto não encontrado.')]))
@@ -245,6 +255,19 @@ const AdminProductForm = () => {
   };
 
   // ---------- Guardar ----------
+  // ---------- Stock (uma quantidade por tamanho e cor) ----------
+  const stockCols = form.sizes.length ? form.sizes : [''];
+  const stockRows = form.hasColors && form.colors.length ? form.colors : [{ key: '', name: '', hex: '' }];
+  const stockCells = stockRows.flatMap((r) => stockCols.map((size) => ({ size, row: r, key: `${size}|${r.key}` })));
+  const stockOf = (key) => Number(String(form.stock[key] ?? '').trim()) || 0;
+  const stockTotal = stockCells.reduce((acc, c) => acc + stockOf(c.key), 0);
+  const setStock = (key, value) => setForm((f) => ({ ...f, stock: { ...f.stock, [key]: value.replace(/[^0-9]/g, '').slice(0, 5) } }));
+  const [fillAll, setFillAll] = useState('');
+  const applyFillAll = () => {
+    if (fillAll === '') return;
+    setForm((f) => ({ ...f, stock: { ...f.stock, ...Object.fromEntries(stockCells.map((c) => [c.key, fillAll])) } }));
+  };
+
   const validate = () => {
     const e = [];
     const price = toNumber(form.price);
@@ -267,6 +290,9 @@ const AdminProductForm = () => {
       const names = form.colors.map((c) => c.name.trim().toLowerCase());
       if (new Set(names).size !== names.length) e.push('Há cores com o mesmo nome.');
     }
+    if (form.trackStock && stockCells.some(({ key }) => !/^\d{0,5}$/.test(String(form.stock[key] ?? '').trim()))) {
+      e.push('O stock tem de ser um número inteiro (0 ou mais).');
+    }
     return e;
   };
 
@@ -276,12 +302,18 @@ const AdminProductForm = () => {
     setErrors(e);
     if (e.length) return topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
+    const lp = loadedPrice.current;
+    const priceUnchanged = Boolean(lp && lp.originalPrice > lp.price && form.onSale
+      && toNumber(form.price) === lp.originalPrice
+      && toNumber(form.discount) === Math.round((1 - lp.price / lp.originalPrice) * 100));
     const payload = {
       name: form.name.trim(),
       description: form.description.trim(),
       category: form.category,
       // Em promoção: guarda o preço final e o preço normal (riscado na loja)
-      price: form.onSale ? salePrice(toNumber(form.price), toNumber(form.discount)) : toNumber(form.price),
+      price: form.onSale
+        ? (priceUnchanged ? loadedPrice.current.price : salePrice(toNumber(form.price), toNumber(form.discount)))
+        : toNumber(form.price),
       originalPrice: form.onSale ? toNumber(form.price) : null,
       images: form.images,
       sizes: form.sizes,
@@ -292,6 +324,10 @@ const AdminProductForm = () => {
       related: form.related,
       featured: form.featured,
       active: form.active,
+      trackStock: form.trackStock,
+      variants: form.trackStock
+        ? stockCells.map((c) => ({ size: c.size, color: c.row.key ? c.row.name.trim() : '', stock: stockOf(c.key) }))
+        : [],
     };
 
     setSaving(true);
@@ -490,6 +526,70 @@ const AdminProductForm = () => {
                     </button>
                   )}
                 </div>
+              </div>
+            )}
+          </Section>
+
+          {/* STOCK */}
+          <Section title="Stock" hint="Quantas peças tens de cada tamanho e cor. Quando chega a 0, essa opção aparece esgotada na loja.">
+            <Toggle id="trackStock" checked={form.trackStock} onChange={(v) => set('trackStock', v)}
+              label="Controlar o stock" description="Desligado: o produto fica sempre disponível, sem contar as peças." />
+            {form.trackStock && (
+              <div className="mt-4">
+                <div className="overflow-x-auto -mx-1 px-1">
+                  <table className="text-sm border-separate border-spacing-y-1">
+                    <thead>
+                      <tr>
+                        <th className="text-left pr-3 text-xs font-semibold text-zinc-500">{stockRows[0].key ? 'Cor' : ''}</th>
+                        {stockCols.map((size) => (
+                          <th key={size} scope="col" className="px-1 text-xs font-semibold text-center min-w-[64px]">{size || 'Peças'}</th>
+                        ))}
+                        <th className="pl-3 text-xs font-semibold text-zinc-500 text-right">Total</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {stockRows.map((r) => {
+                        const rowTotal = stockCols.reduce((acc, size) => acc + stockOf(`${size}|${r.key}`), 0);
+                        return (
+                          <tr key={r.key || 'unico'}>
+                            <th scope="row" className="pr-3 text-left font-normal whitespace-nowrap">
+                              {r.key && (
+                                <span className="inline-flex items-center gap-1.5">
+                                  <span className="w-3.5 h-3.5 rounded-full border border-black/20" style={{ backgroundColor: r.hex }} />
+                                  {r.name.trim() || <span className="text-zinc-400">Sem nome</span>}
+                                </span>
+                              )}
+                            </th>
+                            {stockCols.map((size) => {
+                              const key = `${size}|${r.key}`;
+                              const zero = String(form.stock[key] ?? '').trim() === '' || stockOf(key) === 0;
+                              return (
+                                <td key={size} className="px-1">
+                                  <input inputMode="numeric" value={form.stock[key] ?? ''} onChange={(e) => setStock(key, e.target.value)} placeholder="0"
+                                    aria-label={`Stock ${[r.name.trim(), size].filter(Boolean).join(' ') || 'do produto'}`}
+                                    className={`w-16 border rounded-md px-2 py-2 text-center text-base sm:text-sm outline-none focus:border-black ${zero ? 'border-red-200 bg-red-50/50' : 'border-zinc-300'}`} />
+                                </td>
+                              );
+                            })}
+                            <td className="pl-3 text-right tabular-nums text-zinc-600">{rowTotal}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                  <span className="font-semibold">Total: {stockTotal} {stockTotal === 1 ? 'peça' : 'peças'}</span>
+                  {stockCells.length > 1 && (
+                    <span className="flex items-center gap-2 ml-auto">
+                      <label htmlFor="fillAll" className="text-xs text-zinc-500">Pôr em todos</label>
+                      <input id="fillAll" inputMode="numeric" value={fillAll} onChange={(e) => setFillAll(e.target.value.replace(/[^0-9]/g, '').slice(0, 5))}
+                        className="w-16 border border-zinc-300 rounded-md px-2 py-1.5 text-center text-base sm:text-sm" placeholder="5" />
+                      <button type="button" onClick={applyFillAll} className="px-3 py-1.5 text-xs font-semibold border border-zinc-300 rounded-md hover:border-black">Aplicar</button>
+                    </span>
+                  )}
+                </div>
+                {stockTotal === 0 && <p className="mt-2 text-xs text-red-700">Com 0 peças o produto aparece como esgotado.</p>}
               </div>
             )}
           </Section>

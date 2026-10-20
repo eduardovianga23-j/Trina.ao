@@ -1,5 +1,6 @@
 import FavoriteButton from "../ui/FavoriteButton";
 import { Link } from "react-router-dom";
+import { FaStar } from "react-icons/fa";
 import { formatEUR, discountPercent, categoryLabel } from "../../../utils/format";
 
 /*
@@ -11,7 +12,8 @@ import { formatEUR, discountPercent, categoryLabel } from "../../../utils/format
 const NOVO_DIAS = 30;
 
 const ShopDataCard = ({ product }) => {
-  const { slug, name, images = [], price, originalPrice, category, createdAt } = product;
+  const { slug, name, images = [], price, originalPrice, category, createdAt, rating, numReviews } = product;
+  const esgotado = product.trackStock && product.stock === 0;
   const desconto = discountPercent(price, originalPrice);
   const novo = createdAt && Date.now() - new Date(createdAt).getTime() < NOVO_DIAS * 864e5;
 
@@ -29,8 +31,11 @@ const ShopDataCard = ({ product }) => {
             src={images[0]}
             alt={name}
             loading="lazy"
-            className="w-full h-full object-cover sm:transition sm:duration-700 sm:group-hover:scale-110"
+            className={`w-full h-full object-cover sm:transition sm:duration-700 sm:group-hover:scale-110 ${esgotado ? "opacity-60 grayscale-[40%]" : ""}`}
           />
+        )}
+        {esgotado && (
+          <span className="absolute bottom-2 left-2 text-[10px] sm:text-xs font-bold uppercase tracking-wide bg-black/80 text-white px-2 py-1 rounded-sm">Esgotado</span>
         )}
         <div className="absolute top-2 left-0 sm:top-4 flex flex-col items-start gap-1">
           {desconto !== 0 && (
@@ -47,7 +52,14 @@ const ShopDataCard = ({ product }) => {
 
       <div className="flex flex-col flex-1 p-2 sm:p-3">
         <h3 className="line-clamp-1 font-bold text-xs sm:text-sm text-black">{name}</h3>
-        <p className="line-clamp-1 text-[11px] sm:text-xs text-zinc-600 mt-1">{categoryLabel(category)}</p>
+        <p className="line-clamp-1 text-[11px] sm:text-xs text-zinc-600 mt-1 flex items-center gap-1.5">
+          {categoryLabel(category)}
+          {numReviews > 0 && (
+            <span className="inline-flex items-center gap-0.5 text-zinc-700" aria-label={`${rating} de 5 estrelas, ${numReviews} avaliações`}>
+              · <FaStar className="text-amber-500" aria-hidden="true" /> {Number(rating).toFixed(1).replace(".", ",")} <span className="text-zinc-400">({numReviews})</span>
+            </span>
+          )}
+        </p>
 
         <div className="mt-auto pt-2 sm:pt-3">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 border-t-2 pt-2 sm:pt-3">

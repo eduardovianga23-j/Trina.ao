@@ -10,7 +10,6 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
-  addReview,
 } from '../controllers/productController.js';
 import { protect, staffOnly } from '../middleware/auth.js';
 
@@ -23,7 +22,6 @@ router.get('/by-ids', getProductsByIds);
 router.get('/slug/:slug', getProductBySlug);
 router.get('/:id/related', getRelatedProducts);
 router.get('/:id', getProductById);
-router.post('/:id/reviews', protect, addReview);
 
 // Equipa da loja (administrador principal e gestores)
 router.get('/admin/all', protect, staffOnly, getAllProductsAdmin);
