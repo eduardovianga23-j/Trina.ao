@@ -52,6 +52,20 @@ const orderSchema = new mongoose.Schema(
     receivedAt: Date,  // o cliente confirmou que recebeu
     stockReserved: { type: Boolean, default: false },
 
+    // Fatura certificada (InvoiceXpress)
+    invoice: {
+      type: new mongoose.Schema({
+        status: { type: String, enum: ['creating', 'issued', 'failed'] },
+        id: Number,          // número interno no InvoiceXpress
+        number: String,      // ex.: "FR 2026/15"
+        permalink: String,
+        error: String,
+        attempts: { type: Number, default: 0 },
+        updatedAt: Date,
+      }, { _id: false }),
+      default: undefined,
+    },
+
     // Ligação ao Stripe
     stripeSessionId: { type: String, index: true },
     stripePaymentIntentId: String,

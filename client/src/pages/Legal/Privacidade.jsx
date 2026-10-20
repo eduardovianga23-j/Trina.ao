@@ -63,6 +63,7 @@ const Privacidade = () => (
       <li><strong>Imagens do site</strong>: Cloudinary, quando utilizado.</li>
       <li><strong>Início de sessão</strong>: Google, se escolheres entrar com o Google.</li>
       <li><strong>Pagamentos</strong>: Stripe, que recebe o teu email e o valor da encomenda e trata os dados de pagamento (MB WAY, Multibanco, cartão...).</li>
+      <li><strong>Faturação</strong>: InvoiceXpress, programa de faturação certificado pela Autoridade Tributária, que recebe o nome, o NIF (se o indicares), a morada e o email para emitir a fatura.</li>
       <li><strong>Envio de emails</strong>: Google (Gmail), para te enviarmos os emails sobre as tuas encomendas.</li>
       <li><strong>Entregas</strong>: a transportadora, que recebe o teu nome, a morada e o contacto.</li>
       <li><strong>Autoridades</strong>, quando a lei o exigir.</li>

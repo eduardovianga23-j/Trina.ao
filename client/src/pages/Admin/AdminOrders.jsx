@@ -21,7 +21,53 @@ const VIEWS = [
   ['todas', 'Todas'],
 ];
 
-const OrderRow = ({ order, onChange }) => {
+const InvoiceBox = ({ order, onChange, auto }) => {
+  const [confirm, setConfirm] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const inv = order.invoice;
+  const run = async (fn) => {
+    setBusy(true);
+    setError('');
+    try { await fn(); } catch (err) { setError(apiError(err)); } finally { setBusy(false); }
+  };
+  const open = () => run(async () => { const { data } = await orderAPI.invoice(order._id); window.open(data.url, '_blank', 'noopener'); });
+  const retry = () => run(async () => { const { data } = await orderAPI.retryInvoice(order._id); onChange(data); });
+  return (
+    <div className="mt-4 rounded-md border border-zinc-200 px-3 py-2.5 text-sm">
+      <p className="font-semibold text-xs uppercase tracking-wider text-zinc-500 mb-1">Fatura</p>
+      {inv?.status === 'issued' ? (
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span>✅ {inv.number || 'Emitida'}</span>
+          <button type="button" onClick={open} disabled={busy} className="font-semibold text-red-800 hover:underline">{busy ? 'A abrir...' : 'Ver PDF'}</button>
+        </p>
+      ) : inv?.status === 'failed' ? (
+        <div>
+          <p className="text-red-800">Não foi emitida: {inv.error}</p>
+          <button type="button" onClick={retry} disabled={busy} className="mt-1 font-semibold text-red-800 hover:underline">{busy ? 'A emitir...' : 'Tentar de novo'}</button>
+        </div>
+      ) : inv?.status === 'creating' ? (
+        <p className="text-zinc-600">A ser emitida...</p>
+      ) : !confirm ? (
+        <div>
+          {!auto && <p className="text-xs text-zinc-500">As faturas automáticas só são emitidas com pagamentos reais.</p>}
+          <button type="button" onClick={() => setConfirm(true)} className="font-semibold text-red-800 hover:underline">Emitir fatura agora</button>
+        </div>
+      ) : (
+        <div>
+          <p className="text-xs text-amber-900">Uma fatura certificada não se pode apagar. Emitir mesmo assim?</p>
+          <div className="mt-1 flex gap-3">
+            <button type="button" onClick={retry} disabled={busy} className="font-semibold text-red-800 hover:underline">{busy ? 'A emitir...' : 'Sim, emitir'}</button>
+            <button type="button" onClick={() => setConfirm(false)} className="font-semibold text-zinc-600 hover:underline">Não</button>
+          </div>
+        </div>
+      )}
+      {error && <p role="alert" className="text-red-700 mt-1">{error}</p>}
+    </div>
+  );
+};
+
+const OrderRow = ({ order, onChange, invoicing, autoInvoicing }) => {
   const { isOwner } = useAuth(); // cancelar é só para o administrador principal
   const [open, setOpen] = useState(false);
   const [tracking, setTracking] = useState(order.trackingNumber || '');
@@ -104,6 +150,7 @@ const OrderRow = ({ order, onChange }) => {
             </p>
             {order.nif && <p className="mt-1">NIF: <strong>{order.nif}</strong></p>}
             {order.notes && <p className="mt-2 bg-amber-50 rounded px-3 py-2"><strong>Nota:</strong> {order.notes}</p>}
+            {invoicing && order.paymentStatus === 'paid' && <InvoiceBox order={order} onChange={onChange} auto={autoInvoicing} />}
 
             {order.paymentStatus === 'paid' && order.orderStatus !== 'cancelled' && (
               <div className="mt-5">
@@ -149,7 +196,7 @@ const OrderRow = ({ order, onChange }) => {
                   <div className="rounded-md border border-red-200 bg-red-50 p-3">
                     <p className="text-sm">
                       {order.paymentStatus === 'paid'
-                        ? 'Cancelar? Depois faz o reembolso no painel do Stripe (Pagamentos → escolhe o pagamento → Reembolsar).'
+                        ? `Cancelar? Depois faz o reembolso no painel do Stripe (Pagamentos → escolhe o pagamento → Reembolsar)${order.invoice?.status === 'issued' ? ' e emite a nota de crédito da fatura no InvoiceXpress' : ''}.`
                         : 'Cancelar? A referência Multibanco deixa de funcionar.'}
                     </p>
                     <div className="mt-2 flex gap-2">
@@ -206,7 +253,7 @@ const AdminOrders = () => {
         </div>
       ) : (
         <ul className="grid gap-3">
-          {data.orders.map((o) => <OrderRow key={o._id} order={o} onChange={replace} />)}
+          {data.orders.map((o) => <OrderRow key={o._id} order={o} onChange={replace} invoicing={data.invoicing} autoInvoicing={data.autoInvoicing} />)}
         </ul>
       )}
     </AdminLayout>

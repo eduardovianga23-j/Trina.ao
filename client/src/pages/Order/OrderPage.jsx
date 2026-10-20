@@ -113,6 +113,20 @@ const OrderPage = () => {
   const [reviews, setReviews] = useState([]);
   const [confirming, setConfirming] = useState(false);
   const [confirmError, setConfirmError] = useState('');
+  const [invoiceBusy, setInvoiceBusy] = useState(false);
+  const [invoiceError, setInvoiceError] = useState('');
+  const openInvoice = async () => {
+    setInvoiceBusy(true);
+    setInvoiceError('');
+    try {
+      const { data } = await orderAPI.invoice(order._id);
+      window.location.href = data.url; // abre o PDF da fatura
+    } catch (err) {
+      setInvoiceError(apiError(err));
+    } finally {
+      setInvoiceBusy(false);
+    }
+  };
 
   const load = useCallback(() =>
     orderAPI.getById(id)
@@ -288,6 +302,24 @@ const OrderPage = () => {
                     {order.shippingAddress.phone}
                   </address>
                   {order.nif && <p className="mt-2 text-zinc-600">NIF: {order.nif}</p>}
+                </section>
+              )}
+
+              {order.paymentStatus === 'paid' && order.invoice?.status && (
+                <section className="bg-white rounded-xl border border-zinc-200 p-4 sm:p-6 text-sm flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h2 className="font-bold">Fatura</h2>
+                    <p className="text-zinc-600">
+                      {order.invoice.status === 'issued' ? `Fatura-recibo ${order.invoice.number || ''} · também enviada para o teu email` : 'A fatura está a ser emitida e chega ao teu email em breve.'}
+                    </p>
+                    {invoiceError && <p role="alert" className="text-red-700 mt-1">{invoiceError}</p>}
+                  </div>
+                  {order.invoice.status === 'issued' && (
+                    <button type="button" onClick={openInvoice} disabled={invoiceBusy}
+                      className="py-2.5 px-5 border border-zinc-300 hover:border-black text-sm font-semibold rounded-sm disabled:opacity-60">
+                      {invoiceBusy ? 'A abrir...' : 'Descarregar fatura (PDF)'}
+                    </button>
+                  )}
                 </section>
               )}
 

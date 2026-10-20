@@ -12,6 +12,7 @@ import uploadRoutes from './routes/uploads.js';
 import paymentRoutes from './routes/payments.js';
 import { stripeEnabled } from './utils/stripe.js';
 import { verifyMail } from './utils/mailer.js';
+import { invoicingEnabled, autoInvoicing } from './utils/invoicing.js';
 import { sweepOrders } from './controllers/orderController.js';
 import reviewRoutes from './routes/reviews.js';
 import contactRoutes from './routes/contact.js';
@@ -67,6 +68,9 @@ mongoose
         ? `💳 Pagamentos Stripe ativos (${process.env.STRIPE_SECRET_KEY.startsWith('sk_live') ? 'modo REAL' : 'modo de teste'})`
         : '💳 Pagamentos desligados: falta STRIPE_SECRET_KEY no server/.env');
       verifyMail().then(console.log);
+      console.log(invoicingEnabled()
+        ? `🧾 InvoiceXpress ligado (conta ${process.env.INVOICEXPRESS_ACCOUNT})${autoInvoicing() ? ' · faturas automáticas ativas' : ' · faturas automáticas só com pagamentos reais (Stripe em modo de teste)'}`
+        : '🧾 Faturas automáticas desligadas (opcional: INVOICEXPRESS_ACCOUNT e INVOICEXPRESS_API_KEY no .env)');
       // Confirma pagamentos e devolve ao stock as peças de pagamentos abandonados
       setTimeout(sweepOrders, 15 * 1000);
       setInterval(sweepOrders, 5 * 60 * 1000);
