@@ -63,10 +63,13 @@ export const uploadAPI = {
 };
 
 export const orderAPI = {
-  create: (data) => api.post('/orders', data),
+  shipping: () => api.get('/orders/shipping'),
+  checkout: (data) => api.post('/orders', data), // devolve { orderId, url } da página de pagamento
   getMyOrders: () => api.get('/orders/my-orders'),
   getById: (id) => api.get(`/orders/${id}`),
-  getAll: () => api.get('/orders'),
+  cancel: (id) => api.post(`/orders/${id}/cancel`),
+  // Admin
+  getAll: (view) => api.get('/orders', { params: { view } }),
   updateStatus: (id, data) => api.put(`/orders/${id}/status`, data),
 };
 

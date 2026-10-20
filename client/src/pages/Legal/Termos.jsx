@@ -55,16 +55,17 @@ const Termos = () => (
 
     <H2 id="encomendas">4. Encomendas</H2>
     <p>
-      Antes de confirmares, vês um resumo com os produtos, o preço total, os portes e a forma de pagamento. A encomenda
-      fica concluída quando recebes o email de confirmação. Se um produto ficar indisponível, avisamos-te e devolvemos
-      o valor que já tenhas pago.
+      Antes de pagares, vês um resumo com os produtos, o preço total e os portes. A encomenda fica concluída quando o
+      pagamento é confirmado, e podes acompanhar o seu estado em <Link to="/conta/encomendas">A minha conta → Encomendas</Link>.
+      Se um produto ficar indisponível, avisamos-te e devolvemos o valor que já tenhas pago.
     </p>
 
     <H2 id="pagamento">5. Pagamento</H2>
     <p>
-      Aceitamos os métodos indicados no site (por exemplo, MB WAY, Multibanco, cartão Visa ou Mastercard, PayPal, Apple Pay
-      e Google Pay). O pagamento é processado por fornecedores especializados, e não temos acesso aos dados do teu cartão.
-      A fatura é enviada por email.
+      Aceitamos MB WAY, Multibanco, cartão (Visa, Mastercard) e, quando disponíveis, Apple Pay, Google Pay e outros métodos
+      indicados na página de pagamento. O pagamento é feito numa página segura da <strong>Stripe</strong>, e nós não temos
+      acesso aos dados do teu cartão. Se escolheres Multibanco, a encomenda só é preparada depois de o pagamento chegar, e a
+      referência tem um prazo para ser paga. A fatura é enviada por email.
     </p>
 
     <H2 id="envios">6. Envios e entregas</H2>
