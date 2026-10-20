@@ -1,6 +1,8 @@
 import express from 'express';
 import {
-  createOrder,
+  checkout,
+  getShipping,
+  cancelPendingOrder,
   getMyOrders,
   getOrderById,
   getAllOrders,
@@ -10,11 +12,12 @@ import { protect, adminOnly } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.post('/', protect, createOrder);
+router.get('/shipping', getShipping);
+router.post('/', protect, checkout);
 router.get('/my-orders', protect, getMyOrders);
-router.get('/:id', protect, getOrderById);
-
 router.get('/', protect, adminOnly, getAllOrders);
+router.get('/:id', protect, getOrderById);
+router.post('/:id/cancel', protect, cancelPendingOrder);
 router.put('/:id/status', protect, adminOnly, updateOrderStatus);
 
 export default router;

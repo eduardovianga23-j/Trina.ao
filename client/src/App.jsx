@@ -21,6 +21,9 @@ import AdminProductForm from './pages/Admin/AdminProductForm';
 import AdminTeam from './pages/Admin/AdminTeam';
 import Privacidade from './pages/Legal/Privacidade';
 import Termos from './pages/Legal/Termos';
+import Checkout from './pages/Checkout/Checkout';
+import OrderPage from './pages/Order/OrderPage';
+import AdminOrders from './pages/Admin/AdminOrders';
 
 const NotFound = () => (
   <div className="min-h-screen flex flex-col items-center justify-center text-center px-4">
@@ -48,6 +51,8 @@ const App = () => {
         {/* endereço antigo da página de produto */}
         <Route path='/products' element={<Navigate to="/shop" replace />} />
         <Route path='/cart' element={<Cart />} />
+        <Route path='/checkout' element={<RequireAuth><Checkout /></RequireAuth>} />
+        <Route path='/encomenda/:id' element={<RequireAuth><OrderPage /></RequireAuth>} />
         <Route path='/login' element={<Login />} />
         <Route path='/register' element={<Register />} />
         <Route path='/favoritos' element={<Favorites />} />
@@ -59,6 +64,7 @@ const App = () => {
         <Route path='/admin' element={<AdminRoute><AdminProducts /></AdminRoute>} />
         <Route path='/admin/novo' element={<AdminRoute><AdminProductForm /></AdminRoute>} />
         <Route path='/admin/editar/:id' element={<AdminRoute><AdminProductForm /></AdminRoute>} />
+        <Route path='/admin/encomendas' element={<AdminRoute ownerOnly><AdminOrders /></AdminRoute>} />
         <Route path='/admin/equipa' element={<AdminRoute ownerOnly><AdminTeam /></AdminRoute>} />
         <Route path='*' element={<NotFound />} />
       </Routes>

@@ -3,40 +3,60 @@ import mongoose from 'mongoose';
 const orderItemSchema = new mongoose.Schema({
   product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
   name: { type: String, required: true },
-  image: { type: String, required: true },
-  price: { type: Number, required: true },
+  image: { type: String, default: '' },
+  price: { type: Number, required: true }, // preço de cada unidade no momento da compra (euros)
   quantity: { type: Number, required: true, min: 1 },
+  size: { type: String, default: '' },
+  color: { type: new mongoose.Schema({ name: String, hex: String }, { _id: false }), default: undefined },
 });
 
+/*
+  Estados:
+  - paymentStatus: pending (ainda a pagar) · awaiting (referência Multibanco criada, à espera)
+                   · paid (pago) · failed (o pagamento falhou ou a referência expirou) · expired (desistiu)
+  - orderStatus:   awaiting_payment · processing (pago, a preparar) · shipped (enviada)
+                   · delivered (entregue) · cancelled (cancelada)
+*/
 const orderSchema = new mongoose.Schema(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     items: [orderItemSchema],
     shippingAddress: {
-      street: { type: String, required: true },
-      city: { type: String, required: true },
-      province: { type: String, required: true },
-      postalCode: { type: String, required: true },
+      name: String,
+      phone: String,
+      street: String,
+      postalCode: String,
+      city: String,
+      country: { type: String, default: 'Portugal' },
     },
-    paymentMethod: {
-      type: String,
-      enum: ['multicaixa', 'transferencia', 'cash'],
-      required: true,
-    },
+    nif: { type: String, default: '' }, // contribuinte para a fatura (opcional)
+    notes: { type: String, maxlength: 500 },
+
+    paymentMethod: { type: String, default: '' }, // card, mb_way, multibanco, paypal... (vem do Stripe)
     paymentStatus: {
       type: String,
-      enum: ['pending', 'paid', 'failed'],
+      enum: ['pending', 'awaiting', 'paid', 'failed', 'expired'],
       default: 'pending',
     },
     orderStatus: {
       type: String,
-      enum: ['processing', 'confirmed', 'shipped', 'delivered', 'cancelled'],
-      default: 'processing',
+      enum: ['awaiting_payment', 'processing', 'confirmed', 'shipped', 'delivered', 'cancelled'],
+      default: 'awaiting_payment',
     },
+    paidAt: Date,
+    trackingNumber: { type: String, default: '' },
+
+    // Ligação ao Stripe
+    stripeSessionId: { type: String, index: true },
+    stripePaymentIntentId: String,
+    multibanco: {
+      type: new mongoose.Schema({ entity: String, reference: String, expiresAt: Date, voucherUrl: String }, { _id: false }),
+      default: undefined,
+    },
+
     subtotal: { type: Number, required: true },
     shippingCost: { type: Number, default: 0 },
     total: { type: Number, required: true },
-    notes: { type: String },
   },
   { timestamps: true }
 );

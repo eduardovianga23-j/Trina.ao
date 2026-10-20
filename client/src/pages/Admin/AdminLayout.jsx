@@ -10,6 +10,8 @@ const AdminLayout = ({ title, actions, children }) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const onTeam = pathname.startsWith('/admin/equipa');
+  const onOrders = pathname.startsWith('/admin/encomendas');
+  const onProducts = !onTeam && !onOrders;
   const tab = (isActive) =>
     `px-3 py-2.5 text-sm font-semibold border-b-2 -mb-px transition-colors ${
       isActive ? 'border-red-800 text-black' : 'border-transparent text-zinc-500 hover:text-black'
@@ -36,8 +38,9 @@ const AdminLayout = ({ title, actions, children }) => {
 
       <div className="bg-white border-b border-zinc-200">
         <nav className="container-site flex gap-2" aria-label="Secções do painel">
-          <Link to="/admin" className={tab(!onTeam)} aria-current={!onTeam ? "page" : undefined}>Produtos</Link>
-          {/* A gestão da equipa só aparece para o administrador principal */}
+          <Link to="/admin" className={tab(onProducts)} aria-current={onProducts ? "page" : undefined}>Produtos</Link>
+          {/* Encomendas e equipa só aparecem para o administrador principal */}
+          {isOwner && <Link to="/admin/encomendas" className={tab(onOrders)} aria-current={onOrders ? "page" : undefined}>Encomendas</Link>}
           {isOwner && <Link to="/admin/equipa" className={tab(onTeam)} aria-current={onTeam ? "page" : undefined}>Equipa</Link>}
         </nav>
       </div>

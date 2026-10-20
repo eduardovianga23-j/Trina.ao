@@ -40,7 +40,7 @@ const Privacidade = () => (
       <li><strong>Conta:</strong> nome, email e senha. A senha é guardada cifrada, e nem nós a conseguimos ler.</li>
       <li><strong>Entrar com o Google:</strong> se escolheres esta opção, a Google partilha connosco o teu nome, email, foto de perfil e um identificador da tua conta Google. Não recebemos a tua senha do Google.</li>
       <li><strong>Encomendas:</strong> produtos comprados, tamanhos, cores, morada de entrega, contacto e dados de faturação (como o NIF, se o indicares).</li>
-      <li><strong>Pagamentos:</strong> são processados pelos fornecedores de pagamento (por exemplo, MB WAY, Multibanco, cartão ou PayPal). <strong>Não guardamos os dados do teu cartão.</strong></li>
+      <li><strong>Pagamentos:</strong> são processados pela Stripe (MB WAY, Multibanco, cartão e outros). <strong>Não guardamos os dados do teu cartão.</strong></li>
       <li><strong>No teu navegador:</strong> o conteúdo do carrinho e a sessão iniciada ficam guardados no teu próprio dispositivo (ver <a href="#cookies">cookies</a>).</li>
       <li><strong>Favoritos:</strong> os produtos que guardas com o coração, associados à tua conta.</li>
       <li><strong>Comunicações:</strong> o que nos escreveres quando nos contactas.</li>
@@ -61,7 +61,7 @@ const Privacidade = () => (
       <li><strong>Alojamento e base de dados</strong>: MongoDB Atlas, servidores na União Europeia.</li>
       <li><strong>Imagens do site</strong>: Cloudinary, quando utilizado.</li>
       <li><strong>Início de sessão</strong>: Google, se escolheres entrar com o Google.</li>
-      <li><strong>Pagamentos</strong>: os fornecedores do método que escolheres.</li>
+      <li><strong>Pagamentos</strong>: Stripe, que recebe o teu email e o valor da encomenda e trata os dados de pagamento (MB WAY, Multibanco, cartão...).</li>
       <li><strong>Entregas</strong>: a transportadora, que recebe o teu nome, a morada e o contacto.</li>
       <li><strong>Autoridades</strong>, quando a lei o exigir.</li>
     </ul>

@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faShoppingCart, faTrashCan } from "@fortawesome/free-solid-svg-icons";
 import Header from "../../assets/components/header/Header";
@@ -6,15 +7,36 @@ import TopHeader from "../../assets/components/topheader/TopHeader";
 import Footer from "../../assets/components/footer/footer";
 import { useCart } from "../../context/CartContext";
 import { formatEUR } from "../../utils/format";
+import { orderAPI } from "../../services/api";
+import { useShipping, shippingFor } from "../../utils/orders";
 
 const Cart = () => {
   const { items, count, total, updateQuantity, removeItem } = useCart();
+  const shipping = useShipping();
+  const envio = shippingFor(shipping, total);
+  const faltaGratis = shipping?.freeFrom > 0 && envio > 0 ? shipping.freeFrom - total : 0;
+
+  // Voltou da página de pagamento sem pagar: fecha esse pagamento e mostra um aviso
+  const [params, setParams] = useSearchParams();
+  const [cancelado, setCancelado] = useState(false);
+  useEffect(() => {
+    const id = params.get("cancelado");
+    if (!id) return;
+    setCancelado(true);
+    orderAPI.cancel(id).catch(() => {});
+    setParams({}, { replace: true });
+  }, []);
 
   return (
     <>
       <TopHeader />
       <Header />
       <main className="mt-[110px] min-h-[60vh] container-site py-8 md:py-12">
+        {cancelado && (
+          <p role="status" className="mb-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            O pagamento foi cancelado e nada foi cobrado. Os teus produtos continuam no carrinho.
+          </p>
+        )}
         {count === 0 ? (
           <div className="flex flex-col items-center justify-center text-center py-16">
             <FontAwesomeIcon icon={faShoppingCart} className="text-5xl text-zinc-300 mb-6" />
@@ -103,17 +125,27 @@ const Cart = () => {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-zinc-600">Envio</span>
-                    <span className="text-zinc-500">Calculado no checkout</span>
+                    {envio === null ? (
+                      <span className="text-zinc-500">Calculado no checkout</span>
+                    ) : envio === 0 ? (
+                      <span className="font-semibold text-green-700">Grátis</span>
+                    ) : (
+                      <span className="tabular-nums">{formatEUR(envio)}</span>
+                    )}
                   </div>
+                  {faltaGratis > 0 && (
+                    <p className="text-xs text-zinc-600 bg-zinc-50 rounded px-3 py-2">
+                      Faltam <strong>{formatEUR(faltaGratis)}</strong> para teres envio grátis.
+                    </p>
+                  )}
                   <div className="border-t border-zinc-200 pt-3 flex justify-between font-bold text-base">
                     <span>Total</span>
-                    <span className="text-red-800 tabular-nums">{formatEUR(total)}</span>
+                    <span className="text-red-800 tabular-nums">{formatEUR(total + (envio || 0))}</span>
                   </div>
                 </div>
-                {/* TODO: ligar a uma página de checkout ou ao WhatsApp quando estiver pronta */}
-                <button className="w-full mt-6 py-3 bg-red-800 hover:bg-red-900 text-white text-sm font-semibold rounded-sm">
+                <Link to="/checkout" className="block text-center w-full mt-6 py-3 bg-red-800 hover:bg-red-900 text-white text-sm font-semibold rounded-sm">
                   Finalizar compra
-                </button>
+                </Link>
                 <Link to="/shop" className="block text-center text-sm text-zinc-500 hover:text-black mt-4">
                   Continuar a comprar
                 </Link>

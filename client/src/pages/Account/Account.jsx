@@ -10,6 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useFavorites } from '../../context/FavoritesContext';
 import { authAPI, orderAPI, userAPI, apiError } from '../../services/api';
 import { formatEUR } from '../../utils/format';
+import { PAYMENT_STATUS, fmtDate, orderNumber, statusBadge } from '../../utils/orders';
 
 /*
   Minha conta:  /conta  ·  /conta/encomendas  ·  /conta/favoritos  ·  /conta/dados
@@ -21,15 +22,6 @@ const TABS = [
   ['dados', 'Dados da conta', FaUserCog],
 ];
 
-const ORDER_STATUS = {
-  processing: ['Em preparação', 'bg-amber-100 text-amber-800'],
-  confirmed: ['Confirmada', 'bg-blue-100 text-blue-800'],
-  shipped: ['Enviada', 'bg-indigo-100 text-indigo-800'],
-  delivered: ['Entregue', 'bg-green-100 text-green-800'],
-  cancelled: ['Cancelada', 'bg-zinc-200 text-zinc-700'],
-};
-const PAYMENT_STATUS = { pending: 'Pagamento pendente', paid: 'Pago', failed: 'Pagamento falhou' };
-const fmtDate = (d) => new Date(d).toLocaleDateString('pt-PT', { day: 'numeric', month: 'long', year: 'numeric' });
 
 // ---------- Encomendas ----------
 const useOrders = () => {
@@ -55,13 +47,13 @@ const NoOrders = () => (
 );
 
 const OrderCard = ({ order }) => {
-  const [label, cls] = ORDER_STATUS[order.orderStatus] || [order.orderStatus, 'bg-zinc-100 text-zinc-700'];
+  const [label, cls] = order.paymentStatus === 'failed' ? ['Não paga', 'bg-zinc-200 text-zinc-700'] : statusBadge(order);
   const qty = order.items.reduce((a, i) => a + i.quantity, 0);
   return (
-    <li className="bg-white rounded-xl border border-zinc-200 p-4">
+    <li><Link to={`/encomenda/${order._id}`} className="block bg-white rounded-xl border border-zinc-200 p-4 hover:border-zinc-400 transition-colors">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="text-sm font-bold">Encomenda #{String(order._id).slice(-6).toUpperCase()}</p>
+          <p className="text-sm font-bold">Encomenda #{orderNumber(order._id)}</p>
           <p className="text-xs text-zinc-500">{fmtDate(order.createdAt)} · {qty} {qty === 1 ? 'artigo' : 'artigos'}</p>
         </div>
         <span className={`text-xs font-bold px-2 py-1 rounded ${cls}`}>{label}</span>
@@ -69,7 +61,7 @@ const OrderCard = ({ order }) => {
       <ul className="mt-3 flex gap-2 overflow-x-auto">
         {order.items.map((it, i) => (
           <li key={i} className="shrink-0" title={`${it.name} × ${it.quantity}`}>
-            <img src={it.image || it.product?.images?.[0]} alt={it.name} className="w-14 h-16 object-cover rounded-md bg-zinc-100" />
+            <img src={it.image} alt={it.name} className="w-14 h-16 object-cover rounded-md bg-zinc-100" />
           </li>
         ))}
       </ul>
@@ -77,7 +69,7 @@ const OrderCard = ({ order }) => {
         <span className="text-zinc-500">{PAYMENT_STATUS[order.paymentStatus] || ''}</span>
         <span className="font-bold">Total: {formatEUR(order.total)}</span>
       </div>
-    </li>
+    </Link></li>
   );
 };
 

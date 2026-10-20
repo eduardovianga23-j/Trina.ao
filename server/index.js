@@ -8,6 +8,8 @@ import productRoutes from './routes/products.js';
 import orderRoutes from './routes/orders.js';
 import userRoutes from './routes/users.js';
 import uploadRoutes from './routes/uploads.js';
+import paymentRoutes from './routes/payments.js';
+import { stripeEnabled } from './utils/stripe.js';
 import { UPLOAD_DIR, storageMode } from './utils/storage.js';
 
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
@@ -20,6 +22,8 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173' }));
+// Avisos do Stripe (tem de vir antes do express.json)
+app.use('/api/payments', paymentRoutes);
 app.use(express.json({ limit: '1mb' }));
 
 // Fotos guardadas localmente (quando não se usa o Cloudinary)
@@ -47,6 +51,11 @@ mongoose
   .connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/trina_ao')
   .then(() => {
     console.log('✅ MongoDB connected');
-    app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT} · fotos: ${storageMode()}`));
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT} · fotos: ${storageMode()}`);
+      console.log(stripeEnabled()
+        ? `💳 Pagamentos Stripe ativos (${process.env.STRIPE_SECRET_KEY.startsWith('sk_live') ? 'modo REAL' : 'modo de teste'})`
+        : '💳 Pagamentos desligados: falta STRIPE_SECRET_KEY no server/.env');
+    });
   })
   .catch((err) => console.error('❌ MongoDB error:', err.message));
