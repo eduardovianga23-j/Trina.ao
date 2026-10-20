@@ -22,6 +22,7 @@ import contactRoutes from './routes/contact.js';
 import couponRoutes from './routes/coupons.js';
 import stockAlertRoutes from './routes/stockAlerts.js';
 import { UPLOAD_DIR, storageMode } from './utils/storage.js';
+import { pageMeta, renderIndex, robotsTxt, sitemapXml, readTemplate } from './utils/seo.js';
 
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
   console.error('❌ Define JWT_SECRET no ficheiro server/.env (pelo menos 32 caracteres). Vê o .env.example.');
@@ -97,10 +98,23 @@ if (SERVE_CLIENT) {
       res.setHeader('Cache-Control', file.includes(`${path.sep}assets${path.sep}`) ? 'public, max-age=31536000, immutable' : 'public, max-age=3600');
     },
   }));
-  // Todas as outras páginas (/shop, /produto/..., /conta...) são o mesmo index.html: o React trata do resto
-  app.get(/^\/(?!api\/|uploads\/).*/, (req, res) => {
+  // Google: lista de páginas e regras
+  app.get('/robots.txt', (req, res) => res.type('text/plain').send(robotsTxt()));
+  app.get('/sitemap.xml', async (req, res) => {
+    try { res.type('application/xml').send(await sitemapXml()); } catch { res.status(500).end(); }
+  });
+
+  // Todas as outras páginas (/shop, /produto/..., /conta...) são o mesmo index.html: o React trata do resto.
+  // Antes de enviar, o servidor escreve o título, a descrição e a foto de cada página (Google e partilhas).
+  const template = readTemplate(path.join(CLIENT_DIST, 'index.html'));
+  app.get(/^\/(?!api\/|uploads\/).*/, async (req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
-    res.sendFile(path.join(CLIENT_DIST, 'index.html'));
+    try {
+      const meta = await pageMeta(req.path, req.query);
+      res.status(meta.status || 200).type('html').send(renderIndex(template, meta));
+    } catch {
+      res.type('html').send(template);
+    }
   });
 } else {
   app.get('/', (req, res) => res.json({ message: 'Trina.ao API running 🚀' }));

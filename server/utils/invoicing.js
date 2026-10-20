@@ -96,8 +96,8 @@ export const buildInvoice = (order) => {
       client: {
         // Com NIF: um cliente por NIF. Sem NIF: um cliente por conta (fatura a "consumidor final" com o nome)
         name: a.name || order.user?.name || 'Consumidor final',
-        code: order.nif ? `NIF-${order.nif}` : `CONTA-${String(order.user?._id || order.user)}`,
-        email: order.user?.email || '',
+        code: order.nif ? `NIF-${order.nif}` : order.user ? `CONTA-${String(order.user?._id || order.user)}` : `EMAIL-${order.guestEmail}`.slice(0, 60),
+        email: order.user?.email || order.guestEmail || '',
         ...(order.nif && { fiscal_id: order.nif }),
         address: a.street || '',
         postal_code: a.postalCode || '',
@@ -116,10 +116,11 @@ export const issueInvoice = async (order) => {
   if (!doc.id) throw new Error('O InvoiceXpress não devolveu o número do documento');
   const done = await call('PUT', `/invoice_receipts/${doc.id}/change-state.json`, { invoice: { state: 'finalized' } });
   const fin = done?.invoice_receipt || done?.invoice || {};
-  if (process.env.INVOICE_SEND_EMAIL !== '0' && order.user?.email) {
+  const sendTo = order.user?.email || order.guestEmail;
+  if (process.env.INVOICE_SEND_EMAIL !== '0' && sendTo) {
     await call('PUT', `/invoice_receipts/${doc.id}/email-document.json`, {
       message: {
-        client: { email: order.user.email, save: '0' },
+        client: { email: sendTo, save: '0' },
         subject: `Fatura da tua encomenda Trina #${String(order._id).slice(-6).toUpperCase()}`,
         body: 'Olá! Segue em anexo a fatura da tua encomenda. Obrigado por comprares na Trina.',
       },

@@ -10,7 +10,8 @@ const eur = (n) => new Intl.NumberFormat('pt-PT', { style: 'currency', currency:
 const site = () => (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
 const num = (order) => String(order._id).slice(-6).toUpperCase();
 const firstName = (order) => esc(String(order.shippingAddress?.name || order.user?.name || '').split(' ')[0]);
-const orderLink = (order) => `${site()}/encomenda/${order._id}`;
+// Compra sem conta: o link leva o código secreto da encomenda
+const orderLink = (order) => `${site()}/encomenda/${order._id}${order.guestToken ? `?t=${order.guestToken}` : ''}`;
 
 const button = (href, label) =>
   `<a href="${href}" style="display:inline-block;background:#991b1b;color:#ffffff;text-decoration:none;font-weight:bold;padding:12px 22px;border-radius:6px;font-size:14px">${label}</a>`;
@@ -59,7 +60,7 @@ const addressBlock = (order) => {
   </p>`;
 };
 
-const toCustomer = (order) => order.user?.email;
+const toCustomer = (order) => order.user?.email || order.guestEmail;
 
 // ---------- Cliente ----------
 
@@ -113,7 +114,7 @@ export const emailDelivered = (order) => sendMail({
     <h1 style="font-size:20px;margin:0 0 8px">A tua encomenda foi entregue 📦</h1>
     <p style="margin:0">Olá ${firstName(order)}, a encomenda <strong>#${num(order)}</strong> foi marcada como entregue.</p>
     <p style="margin:12px 0 0">Confirma no site que a recebeste e, se quiseres, deixa uma avaliação com fotos. Ajuda muito outras pessoas a comprar com confiança. 💛</p>
-    <p style="margin:24px 0 0;text-align:center">${button(`${orderLink(order)}#avaliar`, 'Confirmar e avaliar')}</p>
+    <p style="margin:24px 0 0;text-align:center">${button(`${orderLink(order)}#avaliar`, order.user ? 'Confirmar e avaliar' : 'Confirmar que recebi')}</p>
     <p style="margin:16px 0 0;color:#71717a;font-size:12px">Ainda não recebeste? Responde a este email e nós ajudamos.</p>`),
 });
 
@@ -134,7 +135,7 @@ export const emailAdminNewOrder = (order, lowStock = []) => sendMail({
   subject: `🛍️ Nova encomenda #${num(order)} — ${eur(order.total)}`,
   html: layout('Nova encomenda', `
     <h1 style="font-size:20px;margin:0 0 8px">Nova encomenda paga!</h1>
-    <p style="margin:0"><strong>#${num(order)}</strong> de ${esc(order.shippingAddress?.name || order.user?.name)} (${esc(order.user?.email)})</p>
+    <p style="margin:0"><strong>#${num(order)}</strong> de ${esc(order.shippingAddress?.name || order.user?.name)} (${esc(order.user?.email || order.guestEmail)}${order.user ? '' : ', sem conta'})</p>
     ${itemsTable(order)}
     ${addressBlock(order)}
     ${order.nif ? `<p style="margin:8px 0 0">NIF: <strong>${esc(order.nif)}</strong></p>` : ''}

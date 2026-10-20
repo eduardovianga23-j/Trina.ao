@@ -57,6 +57,8 @@ const Field = ({ id, label, error, hint, className = '', ...props }) => (
 const Checkout = () => {
   const { items, total, count } = useCart();
   const { user } = useAuth();
+  const guest = !user; // compra sem conta
+  const [guestEmail, setGuestEmail] = useState('');
   const shipping = useShipping();
   const envio = shippingFor(shipping, total);
 
@@ -77,7 +79,7 @@ const Checkout = () => {
   const cartKey = JSON.stringify(cartLines);
 
   const loadQuote = async (code) => {
-    const { data } = await orderAPI.quote(cartLines, code || undefined);
+    const { data } = await orderAPI.quote(cartLines, code || undefined, guest ? guestEmail.trim() : undefined);
     setQuote(data);
     return data;
   };
@@ -111,6 +113,7 @@ const Checkout = () => {
 
   useEffect(() => {
     document.title = 'Finalizar compra — Trina';
+    if (!user) return () => { document.title = 'Trina.ao — Liberta a tua essência'; };
     // Preenche com a morada da última encomenda
     orderAPI.getMyOrders()
       .then(({ data }) => {
@@ -123,7 +126,7 @@ const Checkout = () => {
       })
       .catch(() => {});
     return () => { document.title = 'Trina.ao — Liberta a tua essência'; };
-  }, []);
+  }, [user?._id]);
 
   if (count === 0 && !sending) return <Navigate to="/cart" replace />;
 
@@ -137,6 +140,7 @@ const Checkout = () => {
     e.preventDefault();
     setServerError('');
     const found = validate(address, nif);
+    if (guest && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail.trim())) found.email = 'Indica o teu email para receberes a confirmação';
     setErrors(found);
     if (Object.keys(found).length) {
       document.getElementById(`co-${Object.keys(found)[0]}`)?.focus();
@@ -147,6 +151,7 @@ const Checkout = () => {
       const { data } = await orderAPI.checkout({
         shippingAddress: address,
         nif: nif.replace(/\s/g, ''),
+        ...(guest && { email: guestEmail.trim() }),
         notes,
         items: cartLines,
         couponCode: coupon || undefined,
@@ -174,6 +179,19 @@ const Checkout = () => {
           <div className="mt-6 grid lg:grid-cols-[1fr_380px] gap-6 lg:gap-10 items-start">
             {/* Morada */}
             <form id="checkout-form" onSubmit={submit} noValidate className="bg-white rounded-xl border border-zinc-200 p-4 sm:p-6">
+              {guest && (
+                <div className="mb-6">
+                  <div className="rounded-lg bg-zinc-50 border border-zinc-200 px-4 py-3 text-sm flex flex-wrap items-center justify-between gap-2">
+                    <span>Já tens conta? Entra para usares a morada guardada e acompanhares a encomenda.</span>
+                    <Link to="/login" state={{ from: '/checkout' }} className="font-semibold text-red-800 hover:underline">Entrar</Link>
+                  </div>
+                  <h2 className="font-bold mt-5">Comprar sem conta</h2>
+                  <p className="text-xs text-zinc-500 mt-1">Enviamos a confirmação, a fatura e o link para acompanhares a encomenda para este email.</p>
+                  <Field id="co-email" label="Email" type="email" autoComplete="email" value={guestEmail}
+                    onChange={(e) => { setGuestEmail(e.target.value); if (errors.email) setErrors((er) => ({ ...er, email: undefined })); }}
+                    error={errors.email} maxLength={120} className="mt-3" placeholder="o-teu@email.com" />
+                </div>
+              )}
               <h2 className="font-bold">Morada de entrega</h2>
               <p className="text-xs text-zinc-500 mt-1">Enviamos para Portugal (continente e ilhas).</p>
 

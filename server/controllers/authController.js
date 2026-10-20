@@ -5,6 +5,14 @@ import { permsOf } from '../utils/permissions.js';
 import { passwordProblem, newResetToken, hashToken } from '../utils/password.js';
 import { hit, peek, reset as resetLimit } from '../utils/rateLimit.js';
 import { emailPasswordReset, emailPasswordChanged } from '../utils/emails.js';
+import Order from '../models/Order.js';
+
+// Compras feitas sem conta com este email passam para a conta (só quando o email está confirmado:
+// entrar com o Google ou recuperar a senha pelo link do email)
+const attachGuestOrders = (user) =>
+  Order.updateMany({ guestEmail: user.email, user: { $exists: false } }, { $set: { user: user._id } })
+    .then((r) => r.modifiedCount && console.log(`🧾 ${r.modifiedCount} compra(s) sem conta ligadas a ${user.email}`))
+    .catch(() => {});
 
 // sv = versão das sessões: quando a senha muda, sobe, e os tokens antigos deixam de valer
 const generateToken = (user) =>
@@ -132,6 +140,7 @@ export const resetPassword = async (req, res) => {
     const problem = passwordProblem(password, user);
     if (problem) return res.status(400).json({ message: problem });
 
+    attachGuestOrders(user);
     user.password = password;
     user.passwordResetHash = undefined;
     user.passwordResetExpires = undefined;
@@ -242,6 +251,7 @@ export const googleLogin = async (req, res) => {
 
   try {
     const { user, created } = await userFromGooglePayload(payload);
+    attachGuestOrders(user);
     res.status(created ? 201 : 200).json({ ...session(user), created });
   } catch (err) {
     res.status(500).json({ message: 'Erro no servidor' });

@@ -23,7 +23,7 @@ const Cart = () => {
     const id = params.get("cancelado");
     if (!id) return;
     setCancelado(true);
-    orderAPI.cancel(id).catch(() => {});
+    orderAPI.cancel(id, params.get("t") || undefined).catch(() => {});
     setParams({}, { replace: true });
   }, []);
 

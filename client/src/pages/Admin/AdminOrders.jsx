@@ -146,7 +146,12 @@ const OrderRow = ({ order, onChange, invoicing, autoInvoicing }) => {
             </address>
             <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-zinc-700">
               {a.phone && <a href={`tel:${a.phone}`} className="inline-flex items-center gap-1.5 hover:underline"><FaPhoneAlt className="text-xs" />{a.phone}</a>}
-              {order.user?.email && <a href={`mailto:${order.user.email}`} className="inline-flex items-center gap-1.5 hover:underline"><FaEnvelope className="text-xs" />{order.user.email}</a>}
+              {(order.user?.email || order.guestEmail) && (
+                <a href={`mailto:${order.user?.email || order.guestEmail}`} className="inline-flex items-center gap-1.5 hover:underline">
+                  <FaEnvelope className="text-xs" />{order.user?.email || order.guestEmail}
+                  {!order.user && <span className="text-[10px] font-bold uppercase bg-zinc-100 text-zinc-600 px-1.5 py-0.5 rounded">sem conta</span>}
+                </a>
+              )}
             </p>
             {order.nif && <p className="mt-1">NIF: <strong>{order.nif}</strong></p>}
             {order.notes && <p className="mt-2 bg-amber-50 rounded px-3 py-2"><strong>Nota:</strong> {order.notes}</p>}

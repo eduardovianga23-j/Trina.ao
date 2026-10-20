@@ -20,7 +20,10 @@ const orderItemSchema = new mongoose.Schema({
 */
 const orderSchema = new mongoose.Schema(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    // Cliente com conta (user) ou compra sem conta (guestEmail + guestToken, o código secreto do link da encomenda)
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
+    guestEmail: { type: String, lowercase: true, trim: true, index: true },
+    guestToken: String,
     items: [orderItemSchema],
     shippingAddress: {
       name: String,

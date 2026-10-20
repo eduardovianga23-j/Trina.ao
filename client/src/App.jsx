@@ -59,8 +59,9 @@ const App = () => {
         {/* endereço antigo da página de produto */}
         <Route path='/products' element={<Navigate to="/shop" replace />} />
         <Route path='/cart' element={<Cart />} />
-        <Route path='/checkout' element={<RequireAuth><Checkout /></RequireAuth>} />
-        <Route path='/encomenda/:id' element={<RequireAuth><OrderPage /></RequireAuth>} />
+        {/* Pode comprar com ou sem conta */}
+        <Route path='/checkout' element={<Checkout />} />
+        <Route path='/encomenda/:id' element={<RequireAuth allowGuestToken><OrderPage /></RequireAuth>} />
         <Route path='/login' element={<Login />} />
         <Route path='/register' element={<Register />} />
         <Route path='/recuperar-senha' element={<ForgotPassword />} />

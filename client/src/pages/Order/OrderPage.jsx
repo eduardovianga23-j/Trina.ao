@@ -106,6 +106,7 @@ const OrderPage = () => {
   const { id } = useParams();
   const [params, setParams] = useSearchParams();
   const [justPaid] = useState(() => params.get('pago') === '1');
+  const [token] = useState(() => params.get('t') || ''); // compra sem conta
   const { clearCart } = useCart();
   const [order, setOrder] = useState(null);
   const [error, setError] = useState('');
@@ -119,7 +120,7 @@ const OrderPage = () => {
     setInvoiceBusy(true);
     setInvoiceError('');
     try {
-      const { data } = await orderAPI.invoice(order._id);
+      const { data } = await orderAPI.invoice(order._id, token);
       window.location.href = data.url; // abre o PDF da fatura
     } catch (err) {
       setInvoiceError(apiError(err));
@@ -129,7 +130,7 @@ const OrderPage = () => {
   };
 
   const load = useCallback(() =>
-    orderAPI.getById(id)
+    orderAPI.getById(id, token)
       .then(({ data }) => { setOrder(data); return data; })
       .catch((err) => { setError(apiError(err, 'Não foi possível carregar a encomenda.')); return null; }), [id]);
 
@@ -138,7 +139,7 @@ const OrderPage = () => {
     // Voltou do Stripe com o pagamento feito: o carrinho fica vazio
     if (justPaid) {
       clearCart();
-      setParams({}, { replace: true }); // recarregar a página já não volta a esvaziar o carrinho
+      setParams(token ? { t: token } : {}, { replace: true }); // recarregar a página já não volta a esvaziar o carrinho
     }
     load();
     return () => { document.title = 'Trina.ao — Liberta a tua essência'; };
@@ -153,7 +154,7 @@ const OrderPage = () => {
 
   // Avaliações já feitas (só depois de confirmar a receção)
   useEffect(() => {
-    if (order?.receivedAt) reviewAPI.forOrder(order._id).then(({ data }) => setReviews(data)).catch(() => {});
+    if (order?.receivedAt && order.user) reviewAPI.forOrder(order._id).then(({ data }) => setReviews(data)).catch(() => {});
   }, [order?._id, order?.receivedAt]);
 
   // Vindo do email "Confirmar e avaliar": desce até às avaliações
@@ -167,7 +168,7 @@ const OrderPage = () => {
     setConfirming(true);
     setConfirmError('');
     try {
-      const { data } = await orderAPI.confirmReceived(order._id);
+      const { data } = await orderAPI.confirmReceived(order._id, token);
       setOrder(data);
       setTimeout(() => document.getElementById('avaliar')?.scrollIntoView({ behavior: 'smooth' }), 200);
     } catch (err) {
@@ -226,7 +227,18 @@ const OrderPage = () => {
                 </section>
               )}
 
-              {order.receivedAt && (
+              {order.receivedAt && !order.user && (
+                <section id="avaliar" className="bg-white rounded-xl border border-zinc-200 p-4 sm:p-6 scroll-mt-28">
+                  <h2 className="font-bold">Avalia os teus produtos</h2>
+                  <p className="text-sm text-zinc-600 mt-1">
+                    Para deixares uma avaliação (com fotos), entra com o Google usando <strong>{order.guestEmail}</strong>.
+                    Esta encomenda passa logo para a tua conta.
+                  </p>
+                  <Link to="/login" state={{ from: `/encomenda/${order._id}` }} className="inline-block mt-3 py-2.5 px-5 bg-black hover:bg-zinc-800 text-white text-sm font-semibold rounded-sm">Entrar para avaliar</Link>
+                </section>
+              )}
+
+              {order.receivedAt && order.user && (
                 <section id="avaliar" className="bg-white rounded-xl border border-zinc-200 p-4 sm:p-6 scroll-mt-28">
                   <h2 className="font-bold">Avalia os teus produtos</h2>
                   <p className="text-xs text-zinc-500 mt-1">A tua opinião aparece na página do produto como "Compra verificada" e ajuda outras pessoas a escolher.</p>
@@ -327,7 +339,14 @@ const OrderPage = () => {
               )}
 
               <div className="flex flex-wrap gap-3">
-                <Link to="/conta/encomendas" className="py-2.5 px-5 bg-black hover:bg-zinc-800 text-white text-sm font-semibold rounded-sm">As minhas encomendas</Link>
+                {order.user ? (
+                  <Link to="/conta/encomendas" className="py-2.5 px-5 bg-black hover:bg-zinc-800 text-white text-sm font-semibold rounded-sm">As minhas encomendas</Link>
+                ) : (
+                  <p className="basis-full text-xs text-zinc-500">
+                    Compraste sem conta: guarda o email de confirmação, que tem o link para esta página. Para veres todas as compras num só sítio,{' '}
+                    <Link to="/login" state={{ from: `/encomenda/${order._id}` }} className="underline">entra com o Google</Link> com {order.guestEmail}.
+                  </p>
+                )}
                 <Link to="/shop" className="py-2.5 px-5 border border-zinc-300 hover:border-black text-sm font-semibold rounded-sm">Continuar a comprar</Link>
               </div>
             </div>
