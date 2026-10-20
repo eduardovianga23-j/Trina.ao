@@ -4,8 +4,10 @@ import AdminLayout from './AdminLayout';
 import { useAuth } from '../../context/AuthContext';
 import { orderAPI, apiError } from '../../services/api';
 import { formatEUR } from '../../utils/format';
-import { PAYMENT_METHOD, PAYMENT_STATUS, fmtDateTime, orderNumber, statusBadge } from '../../utils/orders';
+import { PAYMENT_METHOD, PAYMENT_STATUS, ZONE_LABEL, fmtDateTime, orderNumber, statusBadge } from '../../utils/orders';
+import ExportOrders from './ExportOrders';
 import DeliveryTimeline from '../../assets/components/ui/DeliveryTimeline';
+import { imgUrl } from '../../utils/img';
 
 /*
   /admin/encomendas — administrador principal e gestores com a permissão "Encomendas".
@@ -116,7 +118,7 @@ const OrderRow = ({ order, onChange, invoicing, autoInvoicing }) => {
             <ul className="divide-y divide-zinc-100">
               {order.items.map((it, i) => (
                 <li key={i} className="flex gap-3 py-2">
-                  <img src={it.image} alt="" className="w-12 h-14 object-cover rounded bg-zinc-100 shrink-0" />
+                  <img src={imgUrl(it.image, 120)} alt="" className="w-12 h-14 object-cover rounded bg-zinc-100 shrink-0" />
                   <span className="flex-1 min-w-0 text-sm">
                     <span className="block font-semibold">{it.name}</span>
                     <span className="flex flex-wrap items-center gap-x-2 text-xs text-zinc-600">
@@ -135,7 +137,7 @@ const OrderRow = ({ order, onChange, invoicing, autoInvoicing }) => {
               ))}
             </ul>
             <p className="text-xs text-zinc-500 mt-2">
-              Subtotal {formatEUR(order.subtotal)}{order.discount > 0 && ` · Desconto ${order.couponCode} −${formatEUR(order.discount)}`} · Envio {order.shippingCost ? formatEUR(order.shippingCost) : 'grátis'} · {PAYMENT_STATUS[order.paymentStatus]}
+              Subtotal {formatEUR(order.subtotal)}{order.discount > 0 && ` · Desconto ${order.couponCode} −${formatEUR(order.discount)}`} · Envio{order.shippingZone && order.shippingZone !== 'continente' && ` (${ZONE_LABEL[order.shippingZone]})`} {order.shippingCost ? formatEUR(order.shippingCost) : 'grátis'} · {PAYMENT_STATUS[order.paymentStatus]}
             </p>
           </div>
 
@@ -238,7 +240,7 @@ const AdminOrders = () => {
   };
 
   return (
-    <AdminLayout title="Encomendas">
+    <AdminLayout title="Encomendas" actions={<ExportOrders />}>
       <div className="flex gap-2 overflow-x-auto pb-1 mb-5 [scrollbar-width:none]" role="tablist">
         {VIEWS.map(([key, label]) => (
           <button key={key} role="tab" aria-selected={view === key} onClick={() => setView(key)}

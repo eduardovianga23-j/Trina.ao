@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import AdminLayout from './AdminLayout';
 import { productAPI, apiError } from '../../services/api';
 import { formatEUR, categoryLabel } from '../../utils/format';
+import { imgUrl } from '../../utils/img';
 
 // /admin — lista de todos os produtos (incluindo os escondidos)
 const AdminProducts = () => {
@@ -91,7 +92,7 @@ const AdminProducts = () => {
       <ul className="grid gap-3">
         {filtered.map((p) => (
           <li key={p._id} className="bg-white rounded-lg border border-zinc-200 p-3 flex items-center gap-3 sm:gap-4">
-            <img src={p.images[0]} alt="" className="w-14 h-16 sm:w-16 sm:h-20 object-cover rounded-md bg-zinc-100 shrink-0" />
+            <img src={imgUrl(p.images[0], 160)} alt="" loading="lazy" className="w-14 h-16 sm:w-16 sm:h-20 object-cover rounded-md bg-zinc-100 shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="font-semibold text-sm truncate">{p.name}</p>
               <p className="text-xs text-zinc-500 mt-0.5">

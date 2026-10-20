@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { faLock, faEnvelope } from '@fortawesome/free-solid-svg-icons';
+import { FaLock, FaEnvelope } from 'react-icons/fa';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { apiError } from '../../services/api';
@@ -56,9 +56,9 @@ const Login = () => {
         </div>
         <div className="flex flex-col gap-5 items-stretch">
           {error && <p role="alert" className="text-sm text-red-800 bg-red-50 border border-red-200 rounded-md px-3 py-2">{error}</p>}
-          <AuthField icon={faEnvelope} label="Email" type="email" autoComplete="email" required
+          <AuthField icon={FaEnvelope} label="Email" type="email" autoComplete="email" required
             value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-          <AuthField icon={faLock} label="Senha" type="password" autoComplete="current-password" required
+          <AuthField icon={FaLock} label="Senha" type="password" autoComplete="current-password" required
             value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
           <Link to="/recuperar-senha" state={{ email: form.email }} className="-mt-3 self-end text-xs font-semibold text-red-800 hover:underline">
             Esqueci-me da senha

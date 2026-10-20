@@ -14,6 +14,7 @@ const AdminLayout = ({ title, actions, children }) => {
     can('products') && { to: '/admin', label: 'Produtos', on: pathname === '/admin' || pathname.startsWith('/admin/novo') || pathname.startsWith('/admin/editar') },
     can('products') && { to: '/admin/descontos', label: 'Descontos', on: pathname.startsWith('/admin/descontos') },
     can('orders') && { to: '/admin/encomendas', label: 'Encomendas', on: pathname.startsWith('/admin/encomendas') },
+    can('reports') && { to: '/admin/estatisticas', label: 'Estatísticas', on: pathname.startsWith('/admin/estatisticas') },
     can('reviews') && { to: '/admin/avaliacoes', label: 'Avaliações', on: pathname.startsWith('/admin/avaliacoes') },
     isOwner && { to: '/admin/equipa', label: 'Equipa', on: pathname.startsWith('/admin/equipa') },
   ].filter(Boolean);

@@ -140,7 +140,8 @@ Depois entra no site com essa conta, abre **/admin** e cria os produtos (com as 
 | `STORE_EMAIL` | opcional | Quem recebe os avisos de encomendas novas |
 | `INVOICEXPRESS_ACCOUNT` / `INVOICEXPRESS_API_KEY` | obrigatório por lei para vender | Faturas certificadas |
 | `INVOICE_VAT_RATE` | opcional | Taxa de IVA (23 por defeito) |
-| `SHIPPING_COST` / `FREE_SHIPPING_FROM` | opcional | Portes |
+| `SHIPPING_COST` / `FREE_SHIPPING_FROM` | opcional | Portes para o continente (3,99 € · grátis a partir de 50 €) |
+| `SHIPPING_COST_ISLANDS` / `FREE_SHIPPING_FROM_ISLANDS` | opcional | Portes para os Açores e a Madeira (6,99 € · grátis a partir de 80 €) |
 
 > 🔒 Estas chaves são secretas. Nunca as escrevas no código nem as mostres em prints.
 

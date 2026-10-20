@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faShoppingCart } from '@fortawesome/free-solid-svg-icons';
+import { FaShoppingCart } from 'react-icons/fa';
 import { useCart } from '../../../context/CartContext';
 
 /*
@@ -29,7 +28,7 @@ const CartIcon = () => {
 
   return (
     <Link to="/cart" aria-label={label} className="nav-icons relative inline-flex items-center justify-center w-9 h-9">
-      <FontAwesomeIcon icon={faShoppingCart} />
+      <FaShoppingCart aria-hidden="true" />
       {count > 0 && (
         <span
           className={`cart-badge absolute -top-1 -right-1.5 min-w-[20px] h-5 px-1.5 rounded-full

@@ -1,6 +1,5 @@
-import { SiVisa, SiPaypal, SiApplepay, SiGooglepay, SiKlarna } from "react-icons/si";
+import { SiVisa, SiMastercard, SiPaypal, SiApplepay, SiGooglepay, SiKlarna } from "react-icons/si";
 import { FaLock } from "react-icons/fa";
-import { MastercardIcon } from "react-svg-credit-card-payment-icons";
 
 /*
   Métodos de pagamento aceites na Europa.
@@ -19,7 +18,7 @@ const imagem = (nome) => {
 
 const METODOS = [
   { nome: "Visa", ficheiro: "visa", render: () => <SiVisa size={34} color="#1A1F71" /> },
-  { nome: "Mastercard", ficheiro: "mastercard", render: () => <MastercardIcon format="logo" width={44} /> },
+  { nome: "Mastercard", ficheiro: "mastercard", render: () => <SiMastercard size={30} color="#EB001B" /> },
   { nome: "PayPal", ficheiro: "paypal", render: () => <SiPaypal size={22} color="#003087" /> },
   { nome: "Apple Pay", ficheiro: "applepay", render: () => <SiApplepay size={38} color="#000" /> },
   { nome: "Google Pay", ficheiro: "googlepay", render: () => <SiGooglepay size={38} color="#3C4043" /> },

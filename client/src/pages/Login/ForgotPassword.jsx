@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { faEnvelope } from '@fortawesome/free-solid-svg-icons';
-import { FaCheckCircle } from 'react-icons/fa';
+import { FaEnvelope, FaCheckCircle } from 'react-icons/fa';
 import AuthCard from './AuthCard';
 import AuthField from '../../assets/components/ui/AuthField';
 import { authAPI, apiError } from '../../services/api';
@@ -48,7 +47,7 @@ const ForgotPassword = () => {
         <form onSubmit={submit} noValidate className="flex flex-col gap-5">
           <p className="text-sm text-zinc-600 text-center -mt-2">Escreve o email da tua conta. Vamos enviar-te um link para criares uma senha nova.</p>
           {error && <p role="alert" className="text-sm text-red-800 bg-red-50 border border-red-200 rounded-md px-3 py-2">{error}</p>}
-          <AuthField icon={faEnvelope} label="Email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+          <AuthField icon={FaEnvelope} label="Email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           <button disabled={loading || !email} className="w-full h-[50px] bg-red-800 hover:bg-red-900 disabled:opacity-60 text-white text-sm rounded-md">
             {loading ? 'A enviar...' : 'Enviar link'}
           </button>

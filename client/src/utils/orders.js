@@ -27,6 +27,7 @@ export const PAYMENT_METHOD = {
   klarna: 'Klarna',
   link: 'Link',
   revolut_pay: 'Revolut Pay',
+  transferencia: 'Transferência',
 };
 
 export const orderNumber = (id) => String(id).slice(-6).toUpperCase();
@@ -58,5 +59,21 @@ export const useShipping = () => {
   return config;
 };
 
-export const shippingFor = (config, subtotal) =>
-  !config || config.cost == null ? null : config.freeFrom > 0 && subtotal >= config.freeFrom ? 0 : config.cost;
+// Zona de envio pelo código postal (igual ao servidor): 9000-9499 Madeira · 9500-9999 Açores
+export const ZONE_LABEL = { continente: 'Portugal continental', madeira: 'Madeira', acores: 'Açores' };
+export const zoneFor = (postalCode = '') => {
+  const m = /^(\d{4})/.exec(String(postalCode).trim());
+  if (!m) return 'continente';
+  const n = Number(m[1]);
+  return n >= 9500 ? 'acores' : n >= 9000 ? 'madeira' : 'continente';
+};
+export const isIslands = (postalCode) => zoneFor(postalCode) !== 'continente';
+
+// Regra de portes da zona: { cost, freeFrom }
+export const shippingRule = (config, postalCode = '') =>
+  !config || config.cost == null ? null : isIslands(postalCode) && config.islands ? config.islands : { cost: config.cost, freeFrom: config.freeFrom };
+
+export const shippingFor = (config, subtotal, postalCode = '') => {
+  const rule = shippingRule(config, postalCode);
+  return !rule ? null : rule.freeFrom > 0 && subtotal >= rule.freeFrom ? 0 : rule.cost;
+};

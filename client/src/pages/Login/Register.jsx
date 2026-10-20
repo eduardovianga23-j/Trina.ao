@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { faLock, faEnvelope, faUserLarge } from '@fortawesome/free-solid-svg-icons';
+import { FaLock, FaEnvelope, FaUser } from 'react-icons/fa';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { apiError } from '../../services/api';
@@ -57,11 +57,11 @@ const Register = () => {
         </div>
         <div className="flex flex-col gap-5 items-stretch">
           {error && <p role="alert" className="text-sm text-red-800 bg-red-50 border border-red-200 rounded-md px-3 py-2">{error}</p>}
-          <AuthField icon={faUserLarge} label="Nome" type="text" autoComplete="name" required
+          <AuthField icon={FaUser} label="Nome" type="text" autoComplete="name" required
             value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          <AuthField icon={faEnvelope} label="Email" type="email" autoComplete="email" required
+          <AuthField icon={FaEnvelope} label="Email" type="email" autoComplete="email" required
             value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-          <AuthField icon={faLock} label="Senha (mínimo 8 caracteres)" type="password" autoComplete="new-password" required minLength={MIN_PASSWORD}
+          <AuthField icon={FaLock} label="Senha (mínimo 8 caracteres)" type="password" autoComplete="new-password" required minLength={MIN_PASSWORD}
             value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
           <PasswordStrength password={form.password} />
           <button disabled={loading || !form.name || !form.email || !form.password}

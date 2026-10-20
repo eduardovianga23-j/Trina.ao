@@ -8,7 +8,8 @@ import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import { orderAPI, apiError } from '../../services/api';
 import { formatEUR } from '../../utils/format';
-import { useShipping, shippingFor } from '../../utils/orders';
+import { useShipping, shippingFor, zoneFor, ZONE_LABEL } from '../../utils/orders';
+import { imgUrl } from '../../utils/img';
 
 /*
   Checkout: o cliente indica a morada de entrega e segue para a página segura do Stripe,
@@ -60,9 +61,12 @@ const Checkout = () => {
   const guest = !user; // compra sem conta
   const [guestEmail, setGuestEmail] = useState('');
   const shipping = useShipping();
-  const envio = shippingFor(shipping, total);
-
   const [address, setAddress] = useState({ ...EMPTY, name: user?.name || '' });
+  // Os portes dependem da zona (continente, Madeira ou Açores), que sai do código postal completo
+  const fullPostal = /^\d{4}-\d{3}$/.test(address.postalCode) ? address.postalCode : '';
+  const zone = zoneFor(fullPostal);
+  const envio = shippingFor(shipping, total, fullPostal);
+
   const [nif, setNif] = useState('');
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState({});
@@ -79,7 +83,7 @@ const Checkout = () => {
   const cartKey = JSON.stringify(cartLines);
 
   const loadQuote = async (code) => {
-    const { data } = await orderAPI.quote(cartLines, code || undefined, guest ? guestEmail.trim() : undefined);
+    const { data } = await orderAPI.quote(cartLines, code || undefined, guest ? guestEmail.trim() : undefined, fullPostal || undefined);
     setQuote(data);
     return data;
   };
@@ -92,7 +96,7 @@ const Checkout = () => {
         setCouponError(apiError(err));
       } else setQuote(null);
     });
-  }, [cartKey, coupon]);
+  }, [cartKey, coupon, zone]);
 
   const applyCoupon = async (e) => {
     e?.preventDefault();
@@ -228,7 +232,7 @@ const Checkout = () => {
                 {items.map((i) => (
                   <li key={i.key} className="flex gap-3 py-3">
                     <span className="relative shrink-0">
-                      <img src={i.image} alt="" className="w-14 h-16 object-cover rounded-md bg-zinc-100" />
+                      <img src={imgUrl(i.image, 160)} alt="" className="w-14 h-16 object-cover rounded-md bg-zinc-100" />
                       <span className="absolute -top-2 -right-2 min-w-5 h-5 px-1 rounded-full bg-zinc-700 text-white text-[11px] font-bold flex items-center justify-center">{i.quantity}</span>
                     </span>
                     <span className="flex-1 min-w-0">
@@ -267,7 +271,7 @@ const Checkout = () => {
                   <div className="flex justify-between text-green-700"><dt>Desconto ({quote.coupon?.code})</dt><dd className="tabular-nums">−{formatEUR(quote.discount)}</dd></div>
                 )}
                 <div className="flex justify-between">
-                  <dt className="text-zinc-600">Envio</dt>
+                  <dt className="text-zinc-600">Envio{zone !== 'continente' && <span className="text-zinc-400"> ({ZONE_LABEL[zone]})</span>}</dt>
                   {(() => { const e = quote ? quote.shipping : envio; return (
                     <dd>{e === null ? '—' : e === 0 ? <span className="font-semibold text-green-700">Grátis</span> : <span className="tabular-nums">{formatEUR(e)}</span>}</dd>
                   ); })()}
