@@ -67,6 +67,10 @@ const Register = () => {
             {loading ? 'A criar conta...' : 'Registar'}
           </button>
           <GoogleButton onCredential={handleGoogle} text="signup_with" disabled={loading} />
+          <p className="text-xs text-zinc-500 text-center leading-relaxed">
+            Ao criar conta, aceitas os <Link to="/termos" className="underline hover:text-black">Termos e Condições</Link> e
+            confirmas que leste a <Link to="/privacidade" className="underline hover:text-black">Política de Privacidade</Link>.
+          </p>
           <p className='text-sm text-center'>
             Já tens uma conta?<Link to="/login" state={location.state} className='font-bold ml-1 hover:underline'>Iniciar sessão</Link>
           </p>

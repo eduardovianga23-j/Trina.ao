@@ -22,3 +22,11 @@ img { max-width: 100%; }
 .nav-btn:hover { background-color: #991b1b; }
 
 .bg { background-color: #686464; }
+
+/* Texto das páginas legais */
+.legal-text p { margin-top: 0.75rem; }
+.legal-text ul { list-style: disc; padding-left: 1.25rem; margin-top: 0.75rem; }
+.legal-text ol { list-style: decimal; padding-left: 1.25rem; margin-top: 0.75rem; }
+.legal-text li { margin-top: 0.35rem; }
+.legal-text a { color: #991b1b; text-decoration: underline; text-underline-offset: 2px; }
+.legal-text strong { color: #18181b; }
