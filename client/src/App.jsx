@@ -9,6 +9,8 @@ import Shop from './pages/Shop/Shop';
 import Products from "./pages/Products/Products";
 import Login from './pages/Login/Login';
 import Register from './pages/Login/Register';
+import ForgotPassword from './pages/Login/ForgotPassword';
+import ResetPassword from './pages/Login/ResetPassword';
 import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
 import { FavoritesProvider } from './context/FavoritesContext';
@@ -60,6 +62,8 @@ const App = () => {
         <Route path='/encomenda/:id' element={<RequireAuth><OrderPage /></RequireAuth>} />
         <Route path='/login' element={<Login />} />
         <Route path='/register' element={<Register />} />
+        <Route path='/recuperar-senha' element={<ForgotPassword />} />
+        <Route path='/nova-senha' element={<ResetPassword />} />
         <Route path='/favoritos' element={<Favorites />} />
         <Route path='/conta' element={<RequireAuth><Account /></RequireAuth>} />
         <Route path='/conta/:tab' element={<RequireAuth><Account /></RequireAuth>} />

@@ -138,7 +138,7 @@ router.delete('/team/:id', protect, adminOnly, async (req, res) => {
 // Admin — get all users
 router.get('/', protect, adminOnly, async (req, res) => {
   try {
-    const users = await User.find().select('-password');
+    const users = await User.find().select('-password -googleId -passwordResetHash -passwordResetExpires -sessionVersion');
     res.json(users);
   } catch (err) {
     res.status(500).json({ message: err.message });

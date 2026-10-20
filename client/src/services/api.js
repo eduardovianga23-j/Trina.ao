@@ -33,6 +33,9 @@ export const authAPI = {
   getMe: () => api.get('/auth/me'),
   googleConfig: () => api.get('/auth/google-config'),
   google: (credential) => api.post('/auth/google', { credential }),
+  forgot: (email) => api.post('/auth/forgot', { email }),
+  reset: (token, password) => api.post('/auth/reset', { token, password }),
+  changePassword: (currentPassword, newPassword) => api.put('/auth/password', { currentPassword, newPassword }),
 };
 
 export const productAPI = {

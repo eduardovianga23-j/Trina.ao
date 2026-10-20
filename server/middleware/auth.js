@@ -8,9 +8,13 @@ export const protect = async (req, res, next) => {
     if (!token) return res.status(401).json({ message: 'Não autorizado' });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = await User.findById(decoded.id).select('-password -googleId');
+    req.user = await User.findById(decoded.id).select('-password -googleId -passwordResetHash -passwordResetExpires');
     // A conta pode ter sido apagada depois de o token ser criado
     if (!req.user) return res.status(401).json({ message: 'Sessão inválida, entra novamente' });
+    // A senha mudou depois de esta sessão começar (ex.: recuperou a senha noutro dispositivo)
+    if ((decoded.sv || 0) !== (req.user.sessionVersion || 0)) {
+      return res.status(401).json({ message: 'A senha foi alterada. Entra novamente.' });
+    }
     next();
   } catch {
     res.status(401).json({ message: 'Sessão expirada, entra novamente' });

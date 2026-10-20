@@ -60,6 +60,9 @@ const Login = () => {
             value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
           <AuthField icon={faLock} label="Senha" type="password" autoComplete="current-password" required
             value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+          <Link to="/recuperar-senha" state={{ email: form.email }} className="-mt-3 self-end text-xs font-semibold text-red-800 hover:underline">
+            Esqueci-me da senha
+          </Link>
           <button disabled={loading || !form.email || !form.password}
             className='w-full h-[50px] bg-red-800 hover:bg-red-900 disabled:opacity-60 text-white text-sm rounded-md'>
             {loading ? 'A entrar...' : 'Iniciar sessão'}

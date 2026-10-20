@@ -22,6 +22,12 @@ const userSchema = new mongoose.Schema(
       reviews: { type: Boolean },
     },
     avatar: { type: String, default: '' },
+    // Recuperar a senha: guarda só um "resumo" do código enviado por email (nunca o código em si)
+    passwordResetHash: String,
+    passwordResetExpires: Date,
+    // Quando a senha muda, sessionVersion sobe e as sessões antigas deixam de valer
+    passwordChangedAt: Date,
+    sessionVersion: { type: Number, default: 0 },
     // Produtos favoritos (coração)
     favorites: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }], default: [] },
     address: {

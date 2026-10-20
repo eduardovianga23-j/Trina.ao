@@ -27,7 +27,7 @@ const layout = (title, body) => `<!doctype html>
         </td></tr>
         <tr><td style="padding:28px 24px;font-size:14px;line-height:1.6">${body}</td></tr>
         <tr><td style="padding:16px 24px;background:#fafafa;color:#71717a;font-size:11px;text-align:center">
-          Recebeste este email porque fizeste uma encomenda na Trina.<br>
+          Recebeste este email por causa da tua conta ou de uma encomenda na Trina.<br>
           <a href="${site()}/termos" style="color:#71717a">Termos e Condições</a> · <a href="${site()}/privacidade" style="color:#71717a">Privacidade</a>
         </td></tr>
       </table>
@@ -168,4 +168,27 @@ export const emailContact = ({ name, email, subjectLabel, order, message, accoun
     </table>
     <div style="padding:14px;background:#fafafa;border-radius:6px;white-space:pre-wrap">${esc(message)}</div>
     <p style="margin:16px 0 0;color:#71717a;font-size:12px">Para responder, basta carregar em "Responder" no teu email.</p>`),
+});
+
+// ---------- Conta ----------
+
+export const emailPasswordReset = (user, link, minutes) => sendMail({
+  to: user.email,
+  subject: 'Criar uma senha nova na Trina',
+  html: layout('Senha nova', `
+    <h1 style="font-size:20px;margin:0 0 8px">Olá ${esc(String(user.name || '').split(' ')[0])},</h1>
+    <p style="margin:0">Pediste para criar uma senha nova. Carrega no botão para escolheres a tua senha nova:</p>
+    <p style="margin:24px 0;text-align:center">${button(link, 'Criar senha nova')}</p>
+    <p style="margin:0;color:#71717a;font-size:12px">O link funciona durante ${minutes} minutos e só pode ser usado uma vez.<br>
+    Se não foste tu que pediste, ignora este email: a tua senha continua igual.</p>`),
+});
+
+export const emailPasswordChanged = (user) => sendMail({
+  to: user.email,
+  subject: 'A tua senha da Trina foi alterada',
+  html: layout('Senha alterada', `
+    <h1 style="font-size:20px;margin:0 0 8px">A tua senha foi alterada</h1>
+    <p style="margin:0">A senha da tua conta (${esc(user.email)}) foi alterada agora. As sessões abertas noutros dispositivos foram terminadas.</p>
+    <p style="margin:12px 0 0">Se não foste tu, recupera já o acesso com "Esqueci-me da senha" e fala connosco.</p>
+    <p style="margin:24px 0 0;text-align:center">${button(`${site()}/recuperar-senha`, 'Não fui eu')}</p>`),
 });
