@@ -81,6 +81,7 @@ const orderSchema = new mongoose.Schema(
     couponCode: String,                   // código de desconto usado
     discount: { type: Number, default: 0 }, // euros descontados nos produtos
     shippingCost: { type: Number, default: 0 },
+    shippingZone: { type: String, enum: ['continente', 'madeira', 'acores'], default: 'continente' },
     total: { type: Number, required: true },
   },
   { timestamps: true }

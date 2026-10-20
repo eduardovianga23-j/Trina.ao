@@ -12,6 +12,7 @@ import { authAPI, orderAPI, userAPI, apiError } from '../../services/api';
 import { formatEUR } from '../../utils/format';
 import PasswordStrength, { MIN_PASSWORD } from '../../assets/components/ui/PasswordStrength';
 import { PAYMENT_STATUS, fmtDate, orderNumber, statusBadge } from '../../utils/orders';
+import { imgUrl } from '../../utils/img';
 
 /*
   Minha conta:  /conta  ·  /conta/encomendas  ·  /conta/favoritos  ·  /conta/dados
@@ -62,7 +63,7 @@ const OrderCard = ({ order }) => {
       <ul className="mt-3 flex gap-2 overflow-x-auto">
         {order.items.map((it, i) => (
           <li key={i} className="shrink-0" title={`${it.name} × ${it.quantity}`}>
-            <img src={it.image} alt={it.name} className="w-14 h-16 object-cover rounded-md bg-zinc-100" />
+            <img src={imgUrl(it.image, 160)} alt={it.name} loading="lazy" className="w-14 h-16 object-cover rounded-md bg-zinc-100" />
           </li>
         ))}
       </ul>

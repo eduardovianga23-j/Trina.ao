@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { FaCamera, FaTimes, FaCheckCircle } from 'react-icons/fa';
 import { StarInput, Stars } from '../../assets/components/ui/Stars';
 import { reviewAPI, apiError } from '../../services/api';
+import { imgUrl } from '../../utils/img';
 
 const MAX_PHOTOS = 3;
 const MAX_MB = 5;
@@ -61,7 +62,7 @@ const ReviewForm = ({ order, item, review, onSaved }) => {
 
   const header = (
     <div className="flex gap-3">
-      <img src={item.image} alt="" className="w-12 h-14 object-cover rounded-md bg-zinc-100 shrink-0" />
+      <img src={imgUrl(item.image, 160)} alt="" className="w-12 h-14 object-cover rounded-md bg-zinc-100 shrink-0" />
       <div className="min-w-0">
         <p className="text-sm font-semibold">{item.name}</p>
         <p className="text-xs text-zinc-500">{[item.size && `Tamanho ${item.size}`, item.color?.name].filter(Boolean).join(' · ')}</p>

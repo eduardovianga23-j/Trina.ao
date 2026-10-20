@@ -33,7 +33,7 @@ export const saveImage = async (buffer) => {
   if (useCloudinary()) {
     const result = await new Promise((resolve, reject) => {
       cloudinary.uploader
-        .upload_stream({ folder: 'trina/produtos', resource_type: 'image' }, (err, res) => (err ? reject(err) : resolve(res)))
+        .upload_stream({ folder: 'trina/produtos', resource_type: 'image', transformation: [{ width: 2000, height: 2000, crop: 'limit' }] }, (err, res) => (err ? reject(err) : resolve(res)))
         .end(buffer);
     });
     return result.secure_url;

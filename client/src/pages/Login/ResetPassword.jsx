@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { faLock } from '@fortawesome/free-solid-svg-icons';
+import { FaLock } from 'react-icons/fa';
 import AuthCard from './AuthCard';
 import AuthField from '../../assets/components/ui/AuthField';
 import PasswordStrength, { MIN_PASSWORD } from '../../assets/components/ui/PasswordStrength';
@@ -56,9 +56,9 @@ const ResetPassword = () => {
             {error}{/expirou|não é válido/.test(error) && <> <Link to="/recuperar-senha" className="font-bold underline">Pedir um link novo</Link></>}
           </p>
         )}
-        <AuthField icon={faLock} label="Senha nova" type="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+        <AuthField icon={FaLock} label="Senha nova" type="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
         <PasswordStrength password={password} />
-        <AuthField icon={faLock} label="Repetir a senha nova" type="password" autoComplete="new-password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+        <AuthField icon={FaLock} label="Repetir a senha nova" type="password" autoComplete="new-password" required value={confirm} onChange={(e) => setConfirm(e.target.value)} />
         {confirm && password !== confirm && <p className="text-xs text-red-700 -mt-3">As senhas ainda não são iguais.</p>}
         <button disabled={loading || !password || !confirm} className="w-full h-[50px] bg-red-800 hover:bg-red-900 disabled:opacity-60 text-white text-sm rounded-md">
           {loading ? 'A guardar...' : 'Guardar senha nova'}

@@ -68,7 +68,7 @@ export const uploadAPI = {
 
 export const orderAPI = {
   shipping: () => api.get('/orders/shipping'),
-  quote: (items, couponCode, email) => api.post('/orders/quote', { items, couponCode, email }), // preços calculados no servidor
+  quote: (items, couponCode, email, postalCode) => api.post('/orders/quote', { items, couponCode, email, postalCode }), // preços calculados no servidor
   checkout: (data) => api.post('/orders', data), // devolve { orderId, url } da página de pagamento
   getMyOrders: () => api.get('/orders/my-orders'),
   // t = código secreto das compras sem conta (vem no link do email)
@@ -102,6 +102,12 @@ export const couponAPI = {
   create: (data) => api.post('/coupons', data),
   update: (id, data) => api.put(`/coupons/${id}`, data),
   remove: (id) => api.delete(`/coupons/${id}`),
+};
+
+// Estatísticas e exportação para o Excel (painel)
+export const reportAPI = {
+  summary: (params) => api.get('/reports/summary', { params }),
+  ordersCsv: (params) => api.get('/reports/orders.csv', { params, responseType: 'blob' }),
 };
 
 // "Avisa-me quando voltar"

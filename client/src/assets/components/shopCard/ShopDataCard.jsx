@@ -2,6 +2,7 @@ import FavoriteButton from "../ui/FavoriteButton";
 import { Link } from "react-router-dom";
 import { FaStar } from "react-icons/fa";
 import { formatEUR, discountPercent, categoryLabel } from "../../../utils/format";
+import { imgUrl, imgSrcSet } from '../../../utils/img';
 
 /*
   Cartão de produto único, usado em todo o site (Home, Shop e "Você também pode comprar").
@@ -28,9 +29,12 @@ const ShopDataCard = ({ product }) => {
       <div className="relative overflow-hidden aspect-[4/5] bg-zinc-100">
         {images[0] && (
           <img
-            src={images[0]}
+            src={imgUrl(images[0], 600)}
+            srcSet={imgSrcSet(images[0])}
+            sizes="(min-width: 1024px) 25vw, 50vw"
             alt={name}
             loading="lazy"
+            decoding="async"
             className={`w-full h-full object-cover sm:transition sm:duration-700 sm:group-hover:scale-110 ${esgotado ? "opacity-60 grayscale-[40%]" : ""}`}
           />
         )}

@@ -50,9 +50,17 @@ const Envios = () => {
         <p>Os portes são calculados no carrinho, antes de pagares.</p>
       ) : (
         <ul>
-          <li>Envio para Portugal: <strong>{portes}</strong>.</li>
-          {shipping.freeFrom > 0 && <li><strong>Envio grátis</strong> em compras a partir de <strong>{formatEUR(shipping.freeFrom)}</strong>.</li>}
-          <li>Vês sempre o valor dos portes no carrinho, antes de pagar.</li>
+          <li>
+            <strong>Portugal continental:</strong> {portes}
+            {shipping.cost > 0 && shipping.freeFrom > 0 && <> · <strong>grátis</strong> a partir de <strong>{formatEUR(shipping.freeFrom)}</strong></>}.
+          </li>
+          {shipping.islands && (
+            <li>
+              <strong>Açores e Madeira:</strong> {shipping.islands.cost === 0 ? 'Grátis' : formatEUR(shipping.islands.cost)}
+              {shipping.islands.cost > 0 && shipping.islands.freeFrom > 0 && <> · <strong>grátis</strong> a partir de <strong>{formatEUR(shipping.islands.freeFrom)}</strong></>}.
+            </li>
+          )}
+          <li>A zona é escolhida pelo código postal da morada (começados por 9 = ilhas). Vês sempre o valor certo no checkout, antes de pagar.</li>
         </ul>
       )}
 

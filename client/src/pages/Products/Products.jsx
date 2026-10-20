@@ -3,9 +3,7 @@ import { useEffect, useState } from "react";
 import Header from "../../assets/components/header/Header";
 import TopHeader from "../../assets/components/topheader/TopHeader";
 import Footer from "../../assets/components/footer/footer";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faAngleRight } from "@fortawesome/free-solid-svg-icons";
-import { FaExpand, FaChevronLeft, FaChevronRight, FaTimes } from "react-icons/fa";
+import { FaAngleRight, FaExpand, FaChevronLeft, FaChevronRight, FaTimes } from "react-icons/fa";
 import { ProductGrid } from "../../assets/components/shopCard/ShopDataCard";
 import FavoriteButton from "../../assets/components/ui/FavoriteButton";
 import { useCart } from "../../context/CartContext";
@@ -16,6 +14,7 @@ import SizeGuide from "../../assets/components/ui/SizeGuide";
 import { guideFor } from "../../config/tamanhos";
 import { stockAlertAPI } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
+import { imgUrl, imgSrcSet } from '../../utils/img';
 
 // Página de um produto:  /produto/:slug
 const Products = () => {
@@ -161,7 +160,7 @@ const Products = () => {
                 {images.map((image, index) => (
                   <button key={image} onClick={() => pickImage(index)} aria-label={`Ver foto ${index + 1}`} className="shrink-0">
                     <img
-                      src={image}
+                      src={imgUrl(image, 240)}
                       alt=""
                       className={`w-16 h-20 sm:w-full sm:h-auto sm:aspect-[4/5] object-cover rounded-md border-2 ${selectedImageIndex === index ? "border-black" : "border-zinc-200"}`}
                     />
@@ -169,7 +168,7 @@ const Products = () => {
                 ))}
               </div>
               <div className="relative w-full flex-1">
-                <img src={images[selectedImageIndex]} alt={product.name} className="w-full aspect-[4/5] max-h-[560px] object-cover rounded-lg shadow-lg bg-zinc-100" />
+                <img src={imgUrl(images[selectedImageIndex], 1000)} srcSet={imgSrcSet(images[selectedImageIndex], [480, 720, 1000, 1400])} sizes="(min-width: 1024px) 50vw, 100vw" alt={product.name} className="w-full aspect-[4/5] max-h-[560px] object-cover rounded-lg shadow-lg bg-zinc-100" />
                 <button aria-label="Ampliar imagem" className="absolute top-3 left-3 bg-white w-10 h-10 flex items-center justify-center rounded-full shadow" onClick={() => setIsExpanded(true)}>
                   <FaExpand className="text-gray-700"/>
                 </button>
@@ -189,7 +188,7 @@ const Products = () => {
 
               {hasSizes ? (
                 <>
-                  <div className="mt-5"><span className="text-xs font-semibold"><FontAwesomeIcon className="mr-1" icon={faAngleRight}/>Recomendamos o teu tamanho habitual</span></div>
+                  <div className="mt-5"><span className="text-xs font-semibold"><FaAngleRight className="inline mr-1 -mt-0.5" aria-hidden="true" />Recomendamos o teu tamanho habitual</span></div>
                   <fieldset className="mt-3">
                     <div className="flex items-center justify-between gap-3">
                       <legend className="font-semibold text-sm">Tamanho</legend>
@@ -337,7 +336,7 @@ const Products = () => {
         <div className="fixed inset-0 flex items-center justify-center bg-black/90 z-[70]" onClick={() => setIsExpanded(false)}>
           <button aria-label="Fechar" className="absolute top-4 right-4 w-11 h-11 flex items-center justify-center text-white text-2xl"><FaTimes/></button>
           <button aria-label="Anterior" onClick={(e) => { e.stopPropagation(); setSelectedImageIndex(i => (i-1+images.length)%images.length); }} className="absolute left-1 sm:left-10 w-11 h-11 flex items-center justify-center text-white text-3xl sm:text-4xl z-10"><FaChevronLeft/></button>
-          <img src={images[selectedImageIndex]} alt={product.name} onClick={(e) => e.stopPropagation()} className="max-w-[90%] max-h-[85vh] object-contain rounded-lg"/>
+          <img src={imgUrl(images[selectedImageIndex], 1600)} alt={product.name} onClick={(e) => e.stopPropagation()} className="max-w-[90%] max-h-[85vh] object-contain rounded-lg"/>
           <button aria-label="Seguinte" onClick={(e) => { e.stopPropagation(); setSelectedImageIndex(i => (i+1)%images.length); }} className="absolute right-1 sm:right-10 w-11 h-11 flex items-center justify-center text-white text-3xl sm:text-4xl z-10"><FaChevronRight/></button>
         </div>
       )}

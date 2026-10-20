@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faShoppingCart, faTrashCan } from "@fortawesome/free-solid-svg-icons";
+import { FaShoppingCart, FaTrashAlt } from "react-icons/fa";
 import Header from "../../assets/components/header/Header";
 import TopHeader from "../../assets/components/topheader/TopHeader";
 import Footer from "../../assets/components/footer/footer";
@@ -9,6 +8,7 @@ import { useCart } from "../../context/CartContext";
 import { formatEUR } from "../../utils/format";
 import { orderAPI } from "../../services/api";
 import { useShipping, shippingFor } from "../../utils/orders";
+import { imgUrl } from '../../utils/img';
 
 const Cart = () => {
   const { items, count, total, updateQuantity, removeItem } = useCart();
@@ -39,7 +39,7 @@ const Cart = () => {
         )}
         {count === 0 ? (
           <div className="flex flex-col items-center justify-center text-center py-16">
-            <FontAwesomeIcon icon={faShoppingCart} className="text-5xl text-zinc-300 mb-6" />
+            <FaShoppingCart className="text-5xl text-zinc-300 mb-6 mx-auto" aria-hidden="true" />
             <h1 className="text-xl sm:text-2xl font-bold text-zinc-700">O teu carrinho está vazio</h1>
             <p className="text-sm text-zinc-500 mt-2 mb-8">Adiciona alguns produtos para continuar.</p>
             <Link to="/shop" className="py-3 px-8 bg-black hover:bg-zinc-800 text-white text-sm font-semibold rounded-sm">
@@ -57,7 +57,7 @@ const Cart = () => {
               <ul className="md:col-span-2 divide-y divide-zinc-200 border-y border-zinc-200">
                 {items.map((item) => (
                   <li key={item.key} className="flex gap-3 sm:gap-4 py-4 sm:py-5">
-                    <Link to={`/produto/${item.slug}${item.color ? `?cor=${encodeURIComponent(item.color.name)}` : ''}`} className="shrink-0"><img src={item.image} alt={item.name} className="w-20 h-24 sm:w-24 sm:h-28 object-cover rounded-md bg-zinc-100" /></Link>
+                    <Link to={`/produto/${item.slug}${item.color ? `?cor=${encodeURIComponent(item.color.name)}` : ''}`} className="shrink-0"><img src={imgUrl(item.image, 240)} alt={item.name} className="w-20 h-24 sm:w-24 sm:h-28 object-cover rounded-md bg-zinc-100" /></Link>
 
                     <div className="flex-1 min-w-0 flex flex-col">
                       <div className="flex items-start justify-between gap-2">
@@ -79,7 +79,7 @@ const Cart = () => {
                           aria-label={`Remover ${item.name}`}
                           className="w-9 h-9 -mt-2 -mr-2 flex items-center justify-center text-zinc-400 hover:text-red-700 shrink-0"
                         >
-                          <FontAwesomeIcon icon={faTrashCan} />
+                          <FaTrashAlt aria-hidden="true" />
                         </button>
                       </div>
 
@@ -124,7 +124,7 @@ const Cart = () => {
                     <span className="tabular-nums">{formatEUR(total)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-zinc-600">Envio</span>
+                    <span className="text-zinc-600">Envio{shipping?.islands && <span className="text-zinc-400"> (continente)</span>}</span>
                     {envio === null ? (
                       <span className="text-zinc-500">Calculado no checkout</span>
                     ) : envio === 0 ? (
@@ -136,6 +136,13 @@ const Cart = () => {
                   {faltaGratis > 0 && (
                     <p className="text-xs text-zinc-600 bg-zinc-50 rounded px-3 py-2">
                       Faltam <strong>{formatEUR(faltaGratis)}</strong> para teres envio grátis.
+                    </p>
+                  )}
+                  {shipping?.islands && (
+                    <p className="text-xs text-zinc-500">
+                      Açores e Madeira: {shipping.islands.cost === 0 ? 'envio grátis' : formatEUR(shipping.islands.cost)}
+                      {shipping.islands.cost > 0 && shipping.islands.freeFrom > 0 && `, grátis a partir de ${formatEUR(shipping.islands.freeFrom)}`}.
+                      {' '}Os portes certos aparecem no checkout.
                     </p>
                   )}
                   <div className="border-t border-zinc-200 pt-3 flex justify-between font-bold text-base">

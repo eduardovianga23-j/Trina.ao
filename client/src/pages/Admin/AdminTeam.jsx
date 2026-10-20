@@ -7,7 +7,7 @@ import { PERMISSIONS, permsOf } from '../../utils/permissions';
 /*
   /admin/equipa — só o administrador principal.
   Adiciona gestores (pelo email de uma conta já registada no site) e retira-lhes o acesso.
-  Cada gestor tem as permissões que escolheres: Produtos, Encomendas e/ou Avaliações.
+  Cada gestor tem as permissões que escolheres: Produtos, Encomendas, Avaliações e/ou Estatísticas.
   Cancelar encomendas, reembolsos e gerir a equipa é só do administrador principal.
 */
 const AdminTeam = () => {
@@ -17,7 +17,7 @@ const AdminTeam = () => {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [email, setEmail] = useState('');
-  const [newPerms, setNewPerms] = useState({ products: true, orders: false, reviews: false });
+  const [newPerms, setNewPerms] = useState({ products: true, orders: false, reviews: false, reports: false });
   const [savingId, setSavingId] = useState(null);
   const [adding, setAdding] = useState(false);
   const [toRemove, setToRemove] = useState(null);

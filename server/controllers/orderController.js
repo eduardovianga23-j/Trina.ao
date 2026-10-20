@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import { getStripe, stripeEnabled, stripeMessage } from '../utils/stripe.js';
-import { shippingConfig, shippingFor } from '../utils/shipping.js';
+import { shippingConfig, shippingFor, zoneFor } from '../utils/shipping.js';
 import { can } from '../utils/permissions.js';
 import Coupon from '../models/Coupon.js';
 import { evaluateCoupon, couponLabel, normCode } from '../utils/coupons.js';
@@ -314,7 +314,7 @@ const publicOrder = (order) => {
 export const getShipping = (req, res) => res.json({ ...shippingConfig(), payments: stripeEnabled() });
 
 // Subtotal, desconto, portes e total (em cêntimos) — sempre calculados aqui, nunca no navegador
-const priceOrder = async (items, couponCode, userId, email) => {
+const priceOrder = async (items, couponCode, userId, email, postalCode = '') => {
   const subtotalC = items.reduce((acc, i) => acc + cents(i.price) * i.quantity, 0);
   let coupon = null;
   let discountC = 0;
@@ -324,7 +324,7 @@ const priceOrder = async (items, couponCode, userId, email) => {
     if (r.error) return { error: r.error };
     ({ coupon, discountC, freeShipping } = r);
   }
-  const shippingC = freeShipping ? 0 : cents(shippingFor((subtotalC - discountC) / 100));
+  const shippingC = freeShipping ? 0 : cents(shippingFor((subtotalC - discountC) / 100, postalCode));
   return { subtotalC, discountC, shippingC, totalC: subtotalC - discountC + shippingC, coupon };
 };
 
@@ -334,12 +334,14 @@ export const quote = async (req, res) => {
     const { items, error } = await readItems(req.body?.items);
     if (error) return res.status(400).json({ message: error });
     const code = normCode(req.body?.couponCode);
-    const p = await priceOrder(items, code, req.user?._id, req.user?.email || String(req.body?.email || '').trim().toLowerCase());
+    const postalCode = String(req.body?.postalCode || '').trim().slice(0, 8);
+    const p = await priceOrder(items, code, req.user?._id, req.user?.email || String(req.body?.email || '').trim().toLowerCase(), postalCode);
     if (p.error) return res.status(400).json({ message: p.error, field: 'coupon' });
     res.json({
       subtotal: p.subtotalC / 100,
       discount: p.discountC / 100,
       shipping: p.shippingC / 100,
+      zone: zoneFor(postalCode),
       total: p.totalC / 100,
       coupon: p.coupon ? { code: p.coupon.code, label: couponLabel(p.coupon) } : null,
     });
@@ -368,7 +370,7 @@ export const checkout = async (req, res) => {
     if (error) return res.status(400).json({ message: error });
 
     const couponCode = normCode(req.body?.couponCode);
-    const price = await priceOrder(items, couponCode, req.user?._id, req.user?.email || guestEmail);
+    const price = await priceOrder(items, couponCode, req.user?._id, req.user?.email || guestEmail, addr.address.postalCode);
     if (price.error) return res.status(400).json({ message: price.error, field: 'coupon' });
     const { subtotalC, discountC, shippingC, totalC } = price;
     if (totalC < 50) return res.status(400).json({ message: 'O valor mínimo de uma encomenda é 0,50 €' });
@@ -386,6 +388,7 @@ export const checkout = async (req, res) => {
       notes: addr.notes,
       subtotal: subtotalC / 100,
       shippingCost: shippingC / 100,
+      shippingZone: zoneFor(addr.address.postalCode),
       ...(price.coupon && { couponCode: price.coupon.code, discount: discountC / 100 }),
       total: totalC / 100,
     });

@@ -10,6 +10,7 @@ import DeliveryTimeline from '../../assets/components/ui/DeliveryTimeline';
 import ReviewForm from './ReviewForm';
 import { formatEUR } from '../../utils/format';
 import { PAYMENT_METHOD, fmtDate, fmtDateTime, orderNumber, statusBadge } from '../../utils/orders';
+import { imgUrl } from '../../utils/img';
 
 // Copiar a referência Multibanco com um toque
 const CopyValue = ({ label, value }) => {
@@ -285,7 +286,7 @@ const OrderPage = () => {
                 <ul className="mt-4 divide-y divide-zinc-100">
                   {order.items.map((it, i) => (
                     <li key={i} className="flex gap-3 py-3">
-                      <img src={it.image} alt="" className="w-14 h-16 object-cover rounded-md bg-zinc-100 shrink-0" />
+                      <img src={imgUrl(it.image, 160)} alt="" className="w-14 h-16 object-cover rounded-md bg-zinc-100 shrink-0" />
                       <span className="flex-1 min-w-0">
                         <span className="block text-sm font-semibold">{it.name}</span>
                         <span className="block text-xs text-zinc-500">

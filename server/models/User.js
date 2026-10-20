@@ -20,6 +20,7 @@ const userSchema = new mongoose.Schema(
       products: { type: Boolean },
       orders: { type: Boolean },
       reviews: { type: Boolean },
+      reports: { type: Boolean },
     },
     avatar: { type: String, default: '' },
     // Recuperar a senha: guarda só um "resumo" do código enviado por email (nunca o código em si)

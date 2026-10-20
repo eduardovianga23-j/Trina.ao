@@ -93,7 +93,7 @@ router.post('/team', protect, adminOnly, async (req, res) => {
     }
     if (user.role === 'admin') return res.status(400).json({ message: 'Esta conta é a do administrador principal.' });
     if (user.role === 'manager') return res.status(400).json({ message: 'Esta pessoa já é gestora.' });
-    const permissions = req.body?.permissions ? readPermissions(req.body.permissions) : { products: true, orders: false, reviews: false };
+    const permissions = req.body?.permissions ? readPermissions(req.body.permissions) : { products: true, orders: false, reviews: false, reports: false };
     if (noPermission(permissions)) return res.status(400).json({ message: 'Escolhe pelo menos uma permissão.' });
     user.role = 'manager';
     user.permissions = permissions;
@@ -104,7 +104,7 @@ router.post('/team', protect, adminOnly, async (req, res) => {
   }
 });
 
-// Muda as permissões de um gestor  { permissions: { products, orders, reviews } }
+// Muda as permissões de um gestor  { permissions: { products, orders, reviews, reports } }
 router.put('/team/:id/permissions', protect, adminOnly, async (req, res) => {
   try {
     const user = await User.findById(req.params.id).catch(() => null);

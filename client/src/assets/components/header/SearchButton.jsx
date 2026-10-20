@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { FaSearch, FaTimes } from 'react-icons/fa';
 import { productAPI } from '../../../services/api';
 import { formatEUR } from '../../../utils/format';
+import { imgUrl } from '../../../utils/img';
 
 /*
   Lupa do cabeçalho: abre uma barra de pesquisa com sugestões enquanto escreves.
@@ -81,7 +82,7 @@ const SearchButton = () => {
                       {results.map((p) => (
                         <li key={p._id}>
                           <Link to={`/produto/${p.slug}`} onClick={close} className="flex items-center gap-3 py-2.5 hover:bg-zinc-50 -mx-2 px-2 rounded-md">
-                            <img src={p.images[0]} alt="" className="w-11 h-12 object-cover rounded bg-zinc-100 shrink-0" />
+                            <img src={imgUrl(p.images[0], 120)} alt="" loading="lazy" className="w-11 h-12 object-cover rounded bg-zinc-100 shrink-0" />
                             <span className="flex-1 min-w-0 text-sm font-semibold truncate">{p.name}</span>
                             <span className="text-sm font-bold">{formatEUR(p.price)}</span>
                           </Link>

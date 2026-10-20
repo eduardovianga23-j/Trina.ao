@@ -1,7 +1,6 @@
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import './Header.css';
 import { useEffect, useState } from 'react';
-import { faAngleDown } from '@fortawesome/free-solid-svg-icons';
+import { FaAngleDown } from 'react-icons/fa';
 import { FaUserCog, FaBoxOpen, FaHeart, FaTools, FaChevronRight } from 'react-icons/fa';
 import { HiMenuAlt3, HiMenuAlt1 } from "react-icons/hi";
 import { Link, useNavigate } from 'react-router-dom';
@@ -61,7 +60,7 @@ const Header = () => {
 
           <nav className="hidden lg:flex gap-6">
             <div className="relative" onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
-              <button className="nav-shop-text text-sm font-bold">Comprar<FontAwesomeIcon icon={faAngleDown} className="ml-1"/></button>
+              <button className="nav-shop-text text-sm font-bold">Comprar<FaAngleDown className="inline ml-1 -mt-0.5" aria-hidden="true" /></button>
               {isHovered && (
                 <div className={`nav-shop-bar fixed left-1/2 -translate-x-1/2 ${color ? "top-[70px]" : "top-[110px]"} flex w-[90%] xl:w-8/12 max-h-[calc(100vh-130px)] h-5/6 bg-white shadow-[0_-4px_10px_rgba(0,0,0,0.9)] z-50`}>
                   <div className="grid grid-cols-3 gap-6 h-full p-12">

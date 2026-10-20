@@ -6,6 +6,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
 
 import authRoutes from './routes/auth.js';
 import productRoutes from './routes/products.js';
@@ -21,6 +22,7 @@ import reviewRoutes from './routes/reviews.js';
 import contactRoutes from './routes/contact.js';
 import couponRoutes from './routes/coupons.js';
 import stockAlertRoutes from './routes/stockAlerts.js';
+import reportRoutes from './routes/reports.js';
 import { UPLOAD_DIR, storageMode } from './utils/storage.js';
 import { pageMeta, renderIndex, robotsTxt, sitemapXml, readTemplate } from './utils/seo.js';
 
@@ -63,6 +65,9 @@ app.use(helmet({
   },
 }));
 
+// Site mais rápido: as respostas (páginas, código, dados) vão comprimidas
+app.use(compression({ filter: (req, res) => !req.path.startsWith('/api/payments') && compression.filter(req, res) }));
+
 // Middleware
 app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173' }));
 // Avisos do Stripe (tem de vir antes do express.json)
@@ -82,6 +87,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/coupons', couponRoutes);
 app.use('/api/stock-alerts', stockAlertRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Saúde do servidor (o alojamento usa isto para saber se está tudo bem)
 app.get('/api/health', (req, res) => {
