@@ -45,6 +45,14 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
+  // credential = token devolvido pelo botão da Google
+  const loginWithGoogle = async (credential) => {
+    const { data } = await authAPI.google(credential);
+    const { created, ...session } = data;
+    save(session);
+    return { ...session, created };
+  };
+
   const register = async (name, email, password) => {
     const { data } = await authAPI.register({ name, email, password });
     save(data);
@@ -54,7 +62,7 @@ export const AuthProvider = ({ children }) => {
   return (
     <AuthContext.Provider
       value={{
-        user, login, register, logout, checking,
+        user, login, loginWithGoogle, register, logout, checking,
         // isOwner = administrador principal · isStaff = principal ou gestor (podem entrar no painel)
         isOwner: user?.role === 'admin',
         isStaff: ['admin', 'manager'].includes(user?.role),

@@ -7,7 +7,7 @@ export const protect = async (req, res, next) => {
     if (!token) return res.status(401).json({ message: 'Não autorizado' });
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = await User.findById(decoded.id).select('-password');
+    req.user = await User.findById(decoded.id).select('-password -googleId');
     // A conta pode ter sido apagada depois de o token ser criado
     if (!req.user) return res.status(401).json({ message: 'Sessão inválida, entra novamente' });
     next();
