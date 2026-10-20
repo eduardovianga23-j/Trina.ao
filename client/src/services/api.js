@@ -73,6 +73,8 @@ export const orderAPI = {
   getById: (id) => api.get(`/orders/${id}`),
   cancel: (id) => api.post(`/orders/${id}/cancel`),
   confirmReceived: (id) => api.post(`/orders/${id}/received`),
+  invoice: (id) => api.get(`/orders/${id}/invoice`),       // → { url } do PDF da fatura
+  retryInvoice: (id) => api.post(`/orders/${id}/invoice`), // admin: emitir de novo
   // Admin
   getAll: (view) => api.get('/orders', { params: { view } }),
   updateStatus: (id, data) => api.put(`/orders/${id}/status`, data),

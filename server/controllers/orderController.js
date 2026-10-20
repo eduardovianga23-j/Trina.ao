@@ -4,6 +4,7 @@ import Product from '../models/Product.js';
 import { getStripe, stripeEnabled, stripeMessage } from '../utils/stripe.js';
 import { shippingConfig, shippingFor } from '../utils/shipping.js';
 import { can } from '../utils/permissions.js';
+import { invoicingEnabled, autoInvoicing, issueInvoice, invoicePdfUrl } from '../utils/invoicing.js';
 import { reserveStock, releaseOrderStock, lowStockFor } from '../utils/stock.js';
 import {
   emailOrderPaid, emailMultibanco, emailShipped, emailDelivered, emailCancelled,
@@ -159,8 +160,34 @@ const markPaid = async (order, method, piId) => {
     await updated.populate('user', 'name email');
     emailOrderPaid(updated);
     lowStockFor(updated.items).then((low) => emailAdminNewOrder(updated, low)).catch(() => emailAdminNewOrder(updated));
+    if (autoInvoicing()) createInvoiceFor(updated._id); // fatura certificada (InvoiceXpress ligado e pagamentos reais)
   }
   return updated || Order.findById(order._id);
+};
+
+// ---------- Fatura (InvoiceXpress) ----------
+// Emite a fatura-recibo de uma encomenda paga (uma só vez; se falhar, pode tentar outra vez)
+export const createInvoiceFor = async (orderId) => {
+  if (!invoicingEnabled()) return null;
+  const order = await Order.findOneAndUpdate(
+    { _id: orderId, paymentStatus: 'paid', orderStatus: { $ne: 'cancelled' }, $or: [{ invoice: { $exists: false } }, { 'invoice.status': 'failed' }] },
+    { $set: { 'invoice.status': 'creating', 'invoice.updatedAt': new Date() }, $inc: { 'invoice.attempts': 1 } },
+    { new: true }
+  ).populate('user', 'name email');
+  if (!order) return null;
+  try {
+    const inv = await issueInvoice(order);
+    console.log(`🧾 Fatura ${inv.number} emitida para a encomenda ${order._id}`);
+    return Order.findByIdAndUpdate(order._id, {
+      $set: { 'invoice.status': 'issued', 'invoice.id': inv.id, 'invoice.number': inv.number, 'invoice.permalink': inv.permalink, 'invoice.updatedAt': new Date() },
+      $unset: { 'invoice.error': 1 },
+    }, { new: true });
+  } catch (err) {
+    console.error(`🧾 Não foi possível emitir a fatura da encomenda ${order._id}:`, err.message);
+    return Order.findByIdAndUpdate(order._id, {
+      $set: { 'invoice.status': 'failed', 'invoice.error': String(err.message).slice(0, 300), 'invoice.updatedAt': new Date() },
+    }, { new: true });
+  }
 };
 
 // Atualiza a encomenda a partir da sessão do Stripe (com o payment_intent expandido)
@@ -369,6 +396,36 @@ export const confirmReceived = async (req, res) => {
   }
 };
 
+// GET /api/orders/:id/invoice — endereço do PDF da fatura (dono da encomenda ou equipa das encomendas)
+export const getInvoicePdf = async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Encomenda não encontrada' });
+    const order = await Order.findById(req.params.id).select('user invoice');
+    const isOwner = order && String(order.user) === String(req.user._id);
+    if (!order || (!isOwner && !can(req.user, 'orders'))) return res.status(404).json({ message: 'Encomenda não encontrada' });
+    if (order.invoice?.status !== 'issued' || !order.invoice.id) return res.status(404).json({ message: 'A fatura ainda não está disponível' });
+    if (!invoicingEnabled()) return res.status(503).json({ message: 'A faturação não está ligada' });
+    res.json({ url: await invoicePdfUrl(order.invoice.id), number: order.invoice.number });
+  } catch (err) {
+    console.error('🧾', err.message);
+    res.status(502).json({ message: 'Não foi possível obter a fatura agora. Tenta daqui a pouco.' });
+  }
+};
+
+// POST /api/orders/:id/invoice — tentar emitir de novo uma fatura que falhou (equipa das encomendas)
+export const retryInvoice = async (req, res) => {
+  try {
+    if (!invoicingEnabled()) return res.status(503).json({ message: 'A faturação não está ligada. Vê o guia no ficheiro server/.env.example.' });
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Encomenda não encontrada' });
+    const order = (await createInvoiceFor(req.params.id)) || (await Order.findById(req.params.id));
+    if (!order) return res.status(404).json({ message: 'Encomenda não encontrada' });
+    await order.populate('user', 'name email');
+    res.json(publicOrder(order));
+  } catch (err) {
+    res.status(500).json({ message: 'Erro no servidor' });
+  }
+};
+
 // ---------- Administração ----------
 
 const ADMIN_VIEWS = {
@@ -391,7 +448,7 @@ export const getAllOrders = async (req, res) => {
         .limit(200),
       ...Object.values(ADMIN_VIEWS).map((f) => Order.countDocuments(f)),
     ]);
-    res.json({ view, orders, counts: Object.fromEntries(Object.keys(ADMIN_VIEWS).map((k, i) => [k, counts[i]])) });
+    res.json({ view, orders, invoicing: invoicingEnabled(), autoInvoicing: autoInvoicing(), counts: Object.fromEntries(Object.keys(ADMIN_VIEWS).map((k, i) => [k, counts[i]])) });
   } catch (err) {
     res.status(500).json({ message: 'Erro no servidor' });
   }
@@ -476,6 +533,22 @@ export const sweepOrders = async () => {
       $or: [{ paymentStatus: 'pending', createdAt: { $lt: old } }, { paymentStatus: 'awaiting' }],
     }).sort({ createdAt: 1 }).limit(50);
     for (const o of toCheck) await trySync(o);
+
+    // Faturas que falharam (ex.: InvoiceXpress em baixo): tenta de novo até 3 vezes
+    if (autoInvoicing()) {
+      const stuck = new Date(Date.now() - 10 * 60 * 1000);
+      const retry = await Order.find({
+        paymentStatus: 'paid',
+        $or: [
+          { 'invoice.status': 'failed', 'invoice.attempts': { $lt: 3 } },
+          { 'invoice.status': 'creating', 'invoice.updatedAt': { $lt: stuck } },
+        ],
+      }).select('_id').limit(20);
+      for (const o of retry) {
+        await Order.updateOne({ _id: o._id, 'invoice.status': 'creating' }, { $set: { 'invoice.status': 'failed' } });
+        await createInvoiceFor(o._id);
+      }
+    }
   } catch (err) {
     console.error('Verificação automática das encomendas:', err.message);
   }
