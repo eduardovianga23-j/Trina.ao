@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faAngleRight } from "@fortawesome/free-solid-svg-icons";
 import { FaExpand, FaChevronLeft, FaChevronRight, FaTimes } from "react-icons/fa";
 import { ProductGrid } from "../../assets/components/shopCard/ShopDataCard";
+import FavoriteButton from "../../assets/components/ui/FavoriteButton";
 import { useCart } from "../../context/CartContext";
 import { productAPI, apiError } from "../../services/api";
 import { formatEUR, discountPercent, categoryLabel } from "../../utils/format";
@@ -132,7 +133,10 @@ const Products = () => {
               <Link to={`/shop?category=${encodeURIComponent(product.category)}`} className="text-xs uppercase tracking-wider text-zinc-500 hover:text-black">
                 {categoryLabel(product.category)}
               </Link>
-              <h1 className="text-2xl sm:text-3xl font-semibold mt-1">{product.name}</h1>
+              <div className="flex items-start justify-between gap-3 mt-1">
+                <h1 className="text-2xl sm:text-3xl font-semibold">{product.name}</h1>
+                <FavoriteButton productId={product._id} name={product.name} size="lg" className="shrink-0 border border-zinc-200" />
+              </div>
               <p className="text-sm mt-3 leading-relaxed whitespace-pre-line text-zinc-700">{product.description}</p>
 
               {hasSizes ? (

@@ -11,6 +11,10 @@ import Login from './pages/Login/Login';
 import Register from './pages/Login/Register';
 import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
+import { FavoritesProvider } from './context/FavoritesContext';
+import Account from './pages/Account/Account';
+import Favorites from './pages/Account/Favorites';
+import RequireAuth from './pages/Account/RequireAuth';
 import AdminRoute from './pages/Admin/AdminRoute';
 import AdminProducts from './pages/Admin/AdminProducts';
 import AdminProductForm from './pages/Admin/AdminProductForm';
@@ -34,6 +38,7 @@ const App = () => {
 
   return (
     <AuthProvider>
+    <FavoritesProvider>
     <CartProvider>
     <BrowserRouter>
       <Routes>
@@ -45,6 +50,9 @@ const App = () => {
         <Route path='/cart' element={<Cart />} />
         <Route path='/login' element={<Login />} />
         <Route path='/register' element={<Register />} />
+        <Route path='/favoritos' element={<Favorites />} />
+        <Route path='/conta' element={<RequireAuth><Account /></RequireAuth>} />
+        <Route path='/conta/:tab' element={<RequireAuth><Account /></RequireAuth>} />
         <Route path='/privacidade' element={<Privacidade />} />
         <Route path='/termos' element={<Termos />} />
         {/* Área de administração (só admins) */}
@@ -56,6 +64,7 @@ const App = () => {
       </Routes>
     </BrowserRouter>
     </CartProvider>
+    </FavoritesProvider>
     </AuthProvider>
   )
 }

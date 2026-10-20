@@ -1,5 +1,4 @@
-import { faHeart } from "@fortawesome/free-regular-svg-icons/faHeart";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import FavoriteButton from "../ui/FavoriteButton";
 import { Link } from "react-router-dom";
 import { formatEUR, discountPercent, categoryLabel } from "../../../utils/format";
 
@@ -22,15 +21,7 @@ const ShopDataCard = ({ product }) => {
       onClick={() => window.scrollTo(0, 0)}
       className="group flex flex-col shadow-md hover:shadow-lg rounded-lg bg-white relative overflow-hidden transition-shadow"
     >
-      <button
-        type="button"
-        aria-label="Adicionar aos favoritos"
-        onClick={(e) => e.preventDefault()}
-        className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center
-                   bg-white text-neutral-900 rounded-full shadow transition duration-300 hover:bg-yellow-400"
-      >
-        <FontAwesomeIcon icon={faHeart} className="text-sm sm:text-base" />
-      </button>
+      <FavoriteButton productId={product._id} name={name} className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10" />
 
       <div className="relative overflow-hidden aspect-[4/5] bg-zinc-100">
         {images[0] && (

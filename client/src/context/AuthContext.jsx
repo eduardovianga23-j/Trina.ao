@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }) => {
     if (!stored?.token) return setChecking(false);
     authAPI
       .getMe()
-      .then(({ data }) => save({ ...stored, name: data.name, email: data.email, role: data.role }))
+      .then(({ data }) => save({ ...stored, name: data.name, email: data.email, role: data.role, avatar: data.avatar || '' }))
       .catch(() => {})
       .finally(() => setChecking(false));
   }, []);
@@ -44,6 +44,13 @@ export const AuthProvider = ({ children }) => {
     save(data);
     return data;
   };
+
+  // Atualiza dados da sessão (ex.: depois de mudar o nome)
+  const updateUser = (patch) => setUser((u) => {
+    const next = { ...u, ...patch };
+    localStorage.setItem('trina_user', JSON.stringify(next));
+    return next;
+  });
 
   // credential = token devolvido pelo botão da Google
   const loginWithGoogle = async (credential) => {
@@ -62,7 +69,7 @@ export const AuthProvider = ({ children }) => {
   return (
     <AuthContext.Provider
       value={{
-        user, login, loginWithGoogle, register, logout, checking,
+        user, login, loginWithGoogle, register, logout, checking, updateUser,
         // isOwner = administrador principal · isStaff = principal ou gestor (podem entrar no painel)
         isOwner: user?.role === 'admin',
         isStaff: ['admin', 'manager'].includes(user?.role),

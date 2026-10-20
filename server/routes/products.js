@@ -5,6 +5,7 @@ import {
   getProductBySlug,
   getFeaturedProducts,
   getRelatedProducts,
+  getProductsByIds,
   getAllProductsAdmin,
   createProduct,
   updateProduct,
@@ -18,6 +19,7 @@ const router = express.Router();
 // Público
 router.get('/', getProducts);
 router.get('/featured', getFeaturedProducts);
+router.get('/by-ids', getProductsByIds);
 router.get('/slug/:slug', getProductBySlug);
 router.get('/:id/related', getRelatedProducts);
 router.get('/:id', getProductById);

@@ -53,8 +53,10 @@ export const getMyOrders = async (req, res) => {
 
 export const getOrderById = async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id).populate('user', 'name email');
-    if (!order) return res.status(404).json({ message: 'Encomenda não encontrada' });
+    const order = await Order.findById(req.params.id).populate('user', 'name email').catch(() => null);
+    // Só o dono da encomenda (ou o administrador principal) a pode ver
+    const isOwner = order && String(order.user?._id || order.user) === String(req.user._id);
+    if (!order || (!isOwner && req.user.role !== 'admin')) return res.status(404).json({ message: 'Encomenda não encontrada' });
     res.json(order);
   } catch (err) {
     res.status(500).json({ message: err.message });

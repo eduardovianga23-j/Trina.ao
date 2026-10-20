@@ -16,6 +16,8 @@ const userSchema = new mongoose.Schema(
     // customer = cliente · manager = gestor (só gere produtos) · admin = administrador principal (gere tudo, incluindo a equipa)
     role: { type: String, enum: ['customer', 'manager', 'admin'], default: 'customer' },
     avatar: { type: String, default: '' },
+    // Produtos favoritos (coração)
+    favorites: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }], default: [] },
     address: {
       street: String,
       city: String,

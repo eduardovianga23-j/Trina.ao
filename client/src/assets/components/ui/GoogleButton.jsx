@@ -42,6 +42,8 @@ const GoogleButton = ({ onCredential, text = 'continue_with', disabled = false }
         return !cancel && setState('error');
       }
       if (cancel || !box.current) return;
+      // O script pode carregar mas ser bloqueado (ex.: bloqueador de anúncios ou rede)
+      if (!window.google?.accounts?.id) return setState('error');
       window.google.accounts.id.initialize({
         client_id: clientId,
         callback: (res) => res?.credential && handler.current?.(res.credential),

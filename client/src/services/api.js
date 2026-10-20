@@ -41,6 +41,7 @@ export const productAPI = {
   getBySlug: (slug) => api.get(`/products/slug/${encodeURIComponent(slug)}`),
   getById: (id) => api.get(`/products/${id}`),
   getRelated: (id) => api.get(`/products/${id}/related`),
+  getByIds: (ids) => api.get('/products/by-ids', { params: { ids: ids.join(',') } }),
   // Admin
   getAllAdmin: () => api.get('/products/admin/all'),
   create: (data) => api.post('/products', data),
@@ -74,6 +75,14 @@ export const teamAPI = {
   list: () => api.get('/users/team'),
   add: (email) => api.post('/users/team', { email }),
   remove: (id) => api.delete(`/users/team/${id}`),
+};
+
+// Favoritos da conta
+export const favoritesAPI = {
+  list: () => api.get('/users/favorites'),
+  merge: (ids) => api.post('/users/favorites', { ids }),
+  add: (id) => api.put(`/users/favorites/${id}`),
+  remove: (id) => api.delete(`/users/favorites/${id}`),
 };
 
 export const userAPI = {

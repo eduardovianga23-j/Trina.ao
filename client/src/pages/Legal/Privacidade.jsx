@@ -42,6 +42,7 @@ const Privacidade = () => (
       <li><strong>Encomendas:</strong> produtos comprados, tamanhos, cores, morada de entrega, contacto e dados de faturação (como o NIF, se o indicares).</li>
       <li><strong>Pagamentos:</strong> são processados pelos fornecedores de pagamento (por exemplo, MB WAY, Multibanco, cartão ou PayPal). <strong>Não guardamos os dados do teu cartão.</strong></li>
       <li><strong>No teu navegador:</strong> o conteúdo do carrinho e a sessão iniciada ficam guardados no teu próprio dispositivo (ver <a href="#cookies">cookies</a>).</li>
+      <li><strong>Favoritos:</strong> os produtos que guardas com o coração, associados à tua conta.</li>
       <li><strong>Comunicações:</strong> o que nos escreveres quando nos contactas.</li>
     </ul>
 
@@ -107,6 +108,7 @@ const Privacidade = () => (
     <ul>
       <li><strong>Carrinho</strong>: os produtos que adicionaste, para não se perderem ao recarregar a página.</li>
       <li><strong>Sessão</strong>: para te manteres com a sessão iniciada.</li>
+      <li><strong>Favoritos</strong>: se ainda não entraste na conta, os produtos que marcaste com o coração. Quando entras, passam para a tua conta.</li>
     </ul>
     <p>
       Nas páginas de início de sessão e de registo, o botão "Continuar com o Google" é fornecido pela Google, que pode
