@@ -6,6 +6,7 @@ import {
   getFeaturedProducts,
   getRelatedProducts,
   getProductsByIds,
+  getFilterOptions,
   getAllProductsAdmin,
   createProduct,
   updateProduct,
@@ -19,6 +20,7 @@ const router = express.Router();
 router.get('/', getProducts);
 router.get('/featured', getFeaturedProducts);
 router.get('/by-ids', getProductsByIds);
+router.get('/filters', getFilterOptions);
 router.get('/slug/:slug', getProductBySlug);
 router.get('/:id/related', getRelatedProducts);
 router.get('/:id', getProductById);

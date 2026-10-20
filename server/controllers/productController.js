@@ -49,25 +49,77 @@ const SORTS = {
   newest: { createdAt: -1 },
   price_asc: { price: 1 },
   price_desc: { price: -1 },
-  rating: { rating: -1 },
+  rating: { rating: -1, numReviews: -1 },
+  best: { sold: -1, createdAt: -1 },
+};
+
+/*
+  Filtros da loja (todos opcionais):
+  ?search=vestido  ?category=roupas  ?minPrice=10&maxPrice=50  ?size=M  ?color=Preto
+  ?inStock=1 (só com stock)  ?promo=1 (só em promoção)  ?sort=newest|price_asc|price_desc|rating|best
+*/
+const buildFilter = (q) => {
+  const and = [{ active: true }];
+  if (q.category) and.push({ category: String(q.category) });
+  if (q.search) {
+    const rx = { $regex: escapeRegex(String(q.search).trim().slice(0, 60)), $options: 'i' };
+    and.push({ $or: [{ name: rx }, { description: rx }, { 'colors.name': rx }] });
+  }
+  const min = parseFloat(q.minPrice);
+  const max = parseFloat(q.maxPrice);
+  if (min >= 0 || max >= 0) {
+    and.push({ price: { ...(min >= 0 && { $gte: min }), ...(max >= 0 && { $lte: max }) } });
+  }
+  if (q.size) {
+    const size = String(q.size).slice(0, 10);
+    // Tem o tamanho; se o stock for controlado, tem de haver peças desse tamanho
+    and.push({ sizes: size });
+    if (q.inStock === '1') and.push({ $or: [{ trackStock: { $ne: true } }, { variants: { $elemMatch: { size, stock: { $gt: 0 } } } }] });
+  }
+  if (q.color) and.push({ hasColors: true, 'colors.name': String(q.color).slice(0, 40) });
+  if (q.inStock === '1') and.push({ $or: [{ trackStock: { $ne: true } }, { stock: { $gt: 0 } }] });
+  if (q.promo === '1') and.push({ originalPrice: { $gt: 0 } });
+  return { $and: and };
 };
 
 // GET /api/products  (público: só produtos ativos)
 export const getProducts = async (req, res) => {
   try {
-    const { category, search, sort } = req.query;
+    const { sort } = req.query;
     const page = Math.max(1, parseInt(req.query.page, 10) || 1);
     const limit = Math.min(48, Math.max(1, parseInt(req.query.limit, 10) || 12));
-
-    const query = { active: true };
-    if (category) query.category = String(category);
-    if (search) query.name = { $regex: escapeRegex(String(search).slice(0, 60)), $options: 'i' };
+    const query = buildFilter(req.query);
 
     const [products, total] = await Promise.all([
       Product.find(query).select('-reviews').sort(SORTS[sort] || SORTS.newest).limit(limit).skip((page - 1) * limit),
       Product.countDocuments(query),
     ]);
     res.json({ products, total, page, pages: Math.ceil(total / limit) });
+  } catch (err) {
+    sendError(res, err);
+  }
+};
+
+// GET /api/products/filters — opções para os filtros da loja (tamanhos, cores e preços que existem)
+export const getFilterOptions = async (req, res) => {
+  try {
+    const products = await Product.find({ active: true }).select('sizes colors hasColors price');
+    const sizes = [...new Set(products.flatMap((p) => p.sizes))];
+    // Ordem natural: XS, S, M, L, XL, XXL e depois números
+    const ORDER = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL'];
+    sizes.sort((a, b) => {
+      const ia = ORDER.indexOf(a.toUpperCase()), ib = ORDER.indexOf(b.toUpperCase());
+      if (ia >= 0 || ib >= 0) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+      return (parseFloat(a) || 0) - (parseFloat(b) || 0) || a.localeCompare(b);
+    });
+    const colors = new Map();
+    products.filter((p) => p.hasColors).flatMap((p) => p.colors).forEach((c) => { if (!colors.has(c.name)) colors.set(c.name, c.hex); });
+    const prices = products.map((p) => p.price);
+    res.json({
+      sizes,
+      colors: [...colors].map(([name, hex]) => ({ name, hex })).sort((a, b) => a.name.localeCompare(b.name, 'pt')),
+      price: { min: prices.length ? Math.floor(Math.min(...prices)) : 0, max: prices.length ? Math.ceil(Math.max(...prices)) : 0 },
+    });
   } catch (err) {
     sendError(res, err);
   }

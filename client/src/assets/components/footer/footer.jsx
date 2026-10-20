@@ -1,31 +1,37 @@
 import { Link } from "react-router-dom";
 import PaymentMethods from "./PaymentMethods";
+import { LOJA } from "../../../config/loja";
 
 // to = página do site · href = site externo · sem link = ainda por fazer
 const COLUNAS = [
   { title: "Informação legal", items: [
     { label: "Política de privacidade", to: "/privacidade" },
     { label: "Termos e condições", to: "/termos" },
-    { label: "Envios e entregas", to: "/termos#envios" },
-    { label: "Devoluções (14 dias)", to: "/termos#devolucoes" },
+    { label: "Envios e entregas", to: "/envios-devolucoes#envios" },
+    { label: "Devoluções (14 dias)", to: "/envios-devolucoes#devolucoes" },
     { label: "Garantia", to: "/termos#garantia" },
     { label: "Cookies", to: "/privacidade#cookies" },
   ]},
   { title: "Trina", items: [
     { label: "Loja", to: "/shop" },
-    { label: "Ofertas" },
-    { label: "Sobre nós" },
-    { label: "Contacte-nos" },
-    { label: "#novidades" },
+    { label: "Ofertas", to: "/shop?promo=1" },
+    { label: "Sobre nós", to: "/contactos#sobre" },
+    { label: "Contacte-nos", to: "/contactos" },
+    { label: "#novidades", to: "/shop?sort=newest" },
   ]},
   { title: "Ajuda", items: [
-    { label: "Trocas e devoluções", to: "/termos#trocas" },
+    { label: "Trocas e devoluções", to: "/envios-devolucoes#trocas" },
+    { label: "Perguntas frequentes", to: "/envios-devolucoes#perguntas" },
     { label: "Reclamações", to: "/termos#reclamacoes" },
     { label: "Carrinho", to: "/cart" },
-    { label: "Minha conta", to: "/login" },
+    { label: "Minha conta", to: "/conta" },
   ]},
   { title: "Redes sociais", items: [
-    { label: "Facebook" }, { label: "Instagram" }, { label: "WhatsApp" }, { label: "Tik Tok" }, { label: "Twitter" },
+    { label: "Instagram", href: LOJA.redes.instagram },
+    { label: "Facebook", href: LOJA.redes.facebook },
+    { label: "Tik Tok", href: LOJA.redes.tiktok },
+    { label: "Twitter", href: LOJA.redes.twitter },
+    ...(LOJA.whatsapp ? [{ label: "WhatsApp", href: `https://wa.me/${LOJA.whatsapp}` }] : []),
   ]},
 ];
 

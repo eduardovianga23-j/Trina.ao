@@ -17,7 +17,7 @@ export const H2 = ({ id, children }) => (
   <h2 id={id} className="scroll-mt-32 text-lg sm:text-xl font-bold mt-10 mb-3">{children}</h2>
 );
 
-const LegalLayout = ({ title, intro, sections, children }) => {
+const LegalLayout = ({ title, intro, sections, children, eyebrow = 'Informação legal', showUpdated = true }) => {
   const { hash } = useLocation();
   useEffect(() => {
     document.title = `${title} — Trina`;
@@ -32,9 +32,9 @@ const LegalLayout = ({ title, intro, sections, children }) => {
       <Header />
       <main className="mt-[110px] bg-white">
         <div className="container-site max-w-3xl py-8 sm:py-12">
-          <p className="text-xs uppercase tracking-wider text-zinc-500">Informação legal</p>
+          <p className="text-xs uppercase tracking-wider text-zinc-500">{eyebrow}</p>
           <h1 className="text-2xl sm:text-3xl font-bold mt-1">{title}</h1>
-          <p className="text-sm text-zinc-500 mt-2">Última atualização: {LEGAL_ATUALIZADO}</p>
+          {showUpdated && <p className="text-sm text-zinc-500 mt-2">Última atualização: {LEGAL_ATUALIZADO}</p>}
           {intro && <p className="mt-5 text-zinc-700 leading-relaxed">{intro}</p>}
 
           {sections?.length > 0 && (

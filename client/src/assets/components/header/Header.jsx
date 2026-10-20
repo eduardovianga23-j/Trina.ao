@@ -9,6 +9,7 @@ import { useAuth } from '../../../context/AuthContext';
 import CartIcon from './CartIcon';
 import FavoritesIcon from './FavoritesIcon';
 import AccountMenu from './AccountMenu';
+import SearchButton from './SearchButton';
 import UserAvatar from '../ui/UserAvatar';
 import { useFavorites } from '../../../context/FavoritesContext';
 import Logo from '../ui/Logo';
@@ -49,7 +50,8 @@ const Header = () => {
           <Link to="/" aria-label="Trina — página inicial" className="logo-trina shrink-0 flex items-center">
             <Logo tagline className="h-10 sm:h-14" />
           </Link>
-          <div className="flex items-center gap-3 sm:gap-4 lg:hidden">
+          <div className="flex items-center gap-2 sm:gap-4 lg:hidden">
+            <SearchButton />
             <CartIcon />
             <FavoritesIcon />
             <button onClick={toggleMenu} aria-label="Abrir menu" aria-expanded={menuOpen} className="p-1 -mr-1">
@@ -92,13 +94,14 @@ const Header = () => {
                 </div>
               )}
             </div>
-            <a className="nav-links" href="/#">Ofertas</a>
-            <a className="nav-links" href="/">Sobre nós</a>
-            <a className="nav-links" href="/">Contate-nos</a>
-            <a className="nav-links" href="/#">NOVIDADES 🔥</a>
+            <Link className="nav-links" to="/shop?promo=1">Ofertas</Link>
+            <Link className="nav-links" to="/contactos#sobre">Sobre nós</Link>
+            <Link className="nav-links" to="/contactos">Contacte-nos</Link>
+            <Link className="nav-links" to="/shop?sort=newest">NOVIDADES 🔥</Link>
           </nav>
 
           <div className="hidden lg:flex items-center gap-4">
+            <SearchButton />
             <CartIcon />
             <FavoritesIcon />
             <AccountMenu />
@@ -134,10 +137,10 @@ const Header = () => {
             </button>
           </div>
           <nav className="flex flex-col px-6 py-4">
-            {[["Home","/"],["Shop","/shop"],["Ofertas","/#"],["Sobre nós","/#"],["Contate-nos","/#"],["#novidades","/#"]].map(([label,href], i)=>(
-              <a
+            {[["Home","/"],["Shop","/shop"],["Ofertas","/shop?promo=1"],["Sobre nós","/contactos#sobre"],["Contacte-nos","/contactos"],["#novidades","/shop?sort=newest"]].map(([label,href], i)=>(
+              <Link
                 key={label}
-                href={href}
+                to={href}
                 tabIndex={menuOpen ? 0 : -1}
                 onClick={()=>setMenuOpen(false)}
                 style={{ transitionDelay: menuOpen ? `${120 + i * 50}ms` : "0ms" }}
@@ -145,7 +148,7 @@ const Header = () => {
                             ${menuOpen ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-4"}`}
               >
                 {label}
-              </a>
+              </Link>
             ))}
           </nav>
           <div className="mt-auto px-6 pb-8 pt-4 flex flex-col gap-3">
