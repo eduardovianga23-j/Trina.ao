@@ -1,0 +1,14 @@
+{
+  "name": "trina",
+  "private": true,
+  "description": "Loja online Trina — site (client) e servidor (server) no mesmo alojamento",
+  "scripts": {
+    "build": "npm ci --prefix server --omit=dev && npm ci --prefix client --include=dev && npm run build --prefix client",
+    "start": "npm start --prefix server",
+    "dev:server": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client"
+  },
+  "engines": {
+    "node": ">=20.19"
+  }
+}

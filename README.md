@@ -42,13 +42,17 @@ npm run dev            # abre em http://localhost:5173
 
 | Papel | O que pode fazer |
 |---|---|
-| **Administrador principal** | Tudo: produtos e gestão da equipa (adicionar e remover gestores) |
-| **Gestor** | Criar, editar e apagar produtos |
+| **Administrador principal** | Tudo: produtos, encomendas (incluindo cancelar), avaliações e a equipa |
+| **Gestor** | Só o que o administrador ligar: **Produtos**, **Encomendas** (enviar/entregar) e/ou **Avaliações** |
 | **Cliente** | Comprar na loja |
 
 - O administrador principal cria-se com `npm run create-admin` (a password fica escondida enquanto escreves).
-- Para adicionar um gestor: a pessoa cria conta no site; depois, em **Painel → Equipa**, escreves o email dela e carregas em **Tornar gestor**. Ela deve sair e voltar a entrar.
+- Para adicionar um gestor: a pessoa cria conta no site; depois, em **Painel → Equipa**, escreves o email dela, escolhes as permissões e carregas em **Tornar gestor**.
 - Para remover: **Painel → Equipa → Remover**. A conta continua a existir, como cliente.
+
+## Pôr online
+
+Vê o guia [GUIA-ONLINE.md](GUIA-ONLINE.md). Resumo: na pasta principal, `npm run build` constrói o site e `npm start` liga o servidor, que mostra o site e a API no mesmo endereço.
 
 ## Área de administração
 
