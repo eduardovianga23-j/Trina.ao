@@ -68,9 +68,23 @@ export const orderAPI = {
   getMyOrders: () => api.get('/orders/my-orders'),
   getById: (id) => api.get(`/orders/${id}`),
   cancel: (id) => api.post(`/orders/${id}/cancel`),
+  confirmReceived: (id) => api.post(`/orders/${id}/received`),
   // Admin
   getAll: (view) => api.get('/orders', { params: { view } }),
   updateStatus: (id, data) => api.put(`/orders/${id}/status`, data),
+};
+
+// Avaliações com fotos (compra verificada)
+export const reviewAPI = {
+  forProduct: (productId, page = 1) => api.get(`/reviews/product/${productId}`, { params: { page } }),
+  forOrder: (orderId) => api.get(`/reviews/order/${orderId}`),
+  save: (data) => api.post('/reviews', data),
+  remove: (id) => api.delete(`/reviews/${id}`),
+  uploadPhotos: (files) => {
+    const form = new FormData();
+    files.forEach((f) => form.append('photos', f));
+    return api.post('/reviews/photos', form);
+  },
 };
 
 // Equipa da loja (só o administrador principal)

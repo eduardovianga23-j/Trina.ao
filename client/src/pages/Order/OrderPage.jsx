@@ -5,7 +5,9 @@ import Header from '../../assets/components/header/Header';
 import TopHeader from '../../assets/components/topheader/TopHeader';
 import Footer from '../../assets/components/footer/footer';
 import { useCart } from '../../context/CartContext';
-import { orderAPI, apiError } from '../../services/api';
+import { orderAPI, reviewAPI, apiError } from '../../services/api';
+import DeliveryTimeline from '../../assets/components/ui/DeliveryTimeline';
+import ReviewForm from './ReviewForm';
 import { formatEUR } from '../../utils/format';
 import { PAYMENT_METHOD, fmtDate, fmtDateTime, orderNumber, statusBadge } from '../../utils/orders';
 
@@ -38,17 +40,25 @@ const Banner = ({ order, justPaid }) => {
     const cancelled = orderStatus === 'cancelled';
     return (
       <div className={`rounded-xl p-5 sm:p-6 flex gap-4 ${cancelled ? 'bg-zinc-100' : 'bg-green-50 border border-green-200'}`}>
-        {cancelled ? <FaTimesCircle className="text-2xl text-zinc-500 shrink-0 mt-0.5" /> : shipped ? <FaTruck className="text-2xl text-green-700 shrink-0 mt-0.5" /> : <FaCheckCircle className="text-2xl text-green-700 shrink-0 mt-0.5" />}
+        {cancelled ? <FaTimesCircle className="text-2xl text-zinc-500 shrink-0 mt-0.5" /> : shipped && !order.receivedAt ? <FaTruck className="text-2xl text-green-700 shrink-0 mt-0.5" /> : <FaCheckCircle className="text-2xl text-green-700 shrink-0 mt-0.5" />}
         <div>
           <h1 className="text-lg sm:text-xl font-bold">
-            {cancelled ? 'Encomenda cancelada' : orderStatus === 'delivered' ? 'Encomenda entregue' : shipped ? 'A tua encomenda está a caminho' : justPaid ? 'Obrigado pela tua compra!' : 'Pagamento confirmado'}
+            {cancelled ? 'Encomenda cancelada'
+              : order.receivedAt ? 'Encomenda recebida'
+              : orderStatus === 'delivered' ? 'Encomenda entregue'
+              : shipped ? 'A tua encomenda está a caminho'
+              : justPaid ? 'Obrigado pela tua compra!' : 'Pagamento confirmado'}
           </h1>
           <p className="text-sm text-zinc-700 mt-1">
             {cancelled
               ? 'Esta encomenda foi cancelada. Se já pagaste, o reembolso é feito pelo mesmo meio de pagamento.'
+              : order.receivedAt
+              ? 'Obrigado por confirmares! Esperamos que gostes. 💛'
+              : orderStatus === 'delivered'
+              ? 'A transportadora entregou a tua encomenda. Confirma abaixo que a recebeste.'
               : shipped
-              ? 'Já enviámos a tua encomenda.'
-              : 'Recebemos o pagamento e vamos preparar a tua encomenda. Avisamos-te quando for enviada.'}
+              ? 'Já enviámos a tua encomenda. Quando a receberes, confirma aqui.'
+              : 'Recebemos o pagamento e vamos preparar a tua encomenda. Avisamos-te por email quando for enviada.'}
           </p>
         </div>
       </div>
@@ -100,6 +110,9 @@ const OrderPage = () => {
   const [order, setOrder] = useState(null);
   const [error, setError] = useState('');
   const tries = useRef(0);
+  const [reviews, setReviews] = useState([]);
+  const [confirming, setConfirming] = useState(false);
+  const [confirmError, setConfirmError] = useState('');
 
   const load = useCallback(() =>
     orderAPI.getById(id)
@@ -124,6 +137,36 @@ const OrderPage = () => {
     return () => clearTimeout(t);
   }, [order, justPaid, load]);
 
+  // Avaliações já feitas (só depois de confirmar a receção)
+  useEffect(() => {
+    if (order?.receivedAt) reviewAPI.forOrder(order._id).then(({ data }) => setReviews(data)).catch(() => {});
+  }, [order?._id, order?.receivedAt]);
+
+  // Vindo do email "Confirmar e avaliar": desce até às avaliações
+  useEffect(() => {
+    if (order && window.location.hash === '#avaliar') {
+      setTimeout(() => document.getElementById('avaliar')?.scrollIntoView({ behavior: 'smooth' }), 300);
+    }
+  }, [Boolean(order)]);
+
+  const confirmReceived = async () => {
+    setConfirming(true);
+    setConfirmError('');
+    try {
+      const { data } = await orderAPI.confirmReceived(order._id);
+      setOrder(data);
+      setTimeout(() => document.getElementById('avaliar')?.scrollIntoView({ behavior: 'smooth' }), 200);
+    } catch (err) {
+      setConfirmError(apiError(err));
+    } finally {
+      setConfirming(false);
+    }
+  };
+
+  // Um formulário por produto (o mesmo produto em cores diferentes conta uma vez)
+  const toReview = order ? order.items.filter((it, i, all) => all.findIndex((x) => String(x.product) === String(it.product)) === i) : [];
+  const canConfirm = order?.paymentStatus === 'paid' && ['shipped', 'delivered'].includes(order.orderStatus) && !order.receivedAt;
+
   const [label, cls] = order ? statusBadge(order) : [];
   const mb = order?.multibanco;
 
@@ -145,6 +188,43 @@ const OrderPage = () => {
           ) : (
             <div className="grid gap-5">
               <Banner order={order} justPaid={justPaid} />
+
+              {order.paymentStatus === 'paid' && order.orderStatus !== 'cancelled' && (
+                <section className="bg-white rounded-xl border border-zinc-200 p-4 sm:p-6">
+                  <h2 className="font-bold mb-4">Acompanhar a entrega</h2>
+                  <DeliveryTimeline order={order} />
+                  {order.trackingNumber && (
+                    <p className="mt-1 text-sm bg-indigo-50 text-indigo-900 rounded-md px-3 py-2">
+                      Número de seguimento: <strong className="font-mono">{order.trackingNumber}</strong>
+                    </p>
+                  )}
+                  {canConfirm && (
+                    <div className="mt-4 rounded-lg bg-green-50 border border-green-200 p-4">
+                      <p className="text-sm font-semibold">Já recebeste a encomenda?</p>
+                      <p className="text-xs text-zinc-600 mt-0.5">Confirma para sabermos que chegou bem. Depois podes avaliar os produtos.</p>
+                      <button type="button" onClick={confirmReceived} disabled={confirming}
+                        className="mt-3 py-2.5 px-5 bg-green-700 hover:bg-green-800 disabled:opacity-60 text-white text-sm font-semibold rounded-md">
+                        {confirming ? 'A confirmar...' : 'Sim, recebi a encomenda'}
+                      </button>
+                      {confirmError && <p role="alert" className="mt-2 text-sm text-red-700">{confirmError}</p>}
+                    </div>
+                  )}
+                </section>
+              )}
+
+              {order.receivedAt && (
+                <section id="avaliar" className="bg-white rounded-xl border border-zinc-200 p-4 sm:p-6 scroll-mt-28">
+                  <h2 className="font-bold">Avalia os teus produtos</h2>
+                  <p className="text-xs text-zinc-500 mt-1">A tua opinião aparece na página do produto como "Compra verificada" e ajuda outras pessoas a escolher.</p>
+                  <div className="mt-4 grid gap-3">
+                    {toReview.map((it) => (
+                      <ReviewForm key={String(it.product)} order={order} item={it}
+                        review={reviews.find((r) => String(r.product) === String(it.product))}
+                        onSaved={(r) => setReviews((all) => [...all.filter((x) => String(x.product) !== String(r.product)), r])} />
+                    ))}
+                  </div>
+                </section>
+              )}
 
               {order.paymentStatus === 'awaiting' && mb?.reference && (
                 <section className="bg-white rounded-xl border border-zinc-200 p-4 sm:p-6">
@@ -175,11 +255,6 @@ const OrderPage = () => {
                   {['awaiting', 'paid'].includes(order.paymentStatus) && <span className={`text-xs font-bold px-2 py-1 rounded ${cls}`}>{label}</span>}
                 </div>
 
-                {order.trackingNumber && (
-                  <p className="mt-3 text-sm bg-indigo-50 text-indigo-900 rounded-md px-3 py-2">
-                    Número de seguimento: <strong className="font-mono">{order.trackingNumber}</strong>
-                  </p>
-                )}
 
                 <ul className="mt-4 divide-y divide-zinc-100">
                   {order.items.map((it, i) => (

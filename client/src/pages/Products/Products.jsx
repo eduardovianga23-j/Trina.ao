@@ -11,12 +11,13 @@ import FavoriteButton from "../../assets/components/ui/FavoriteButton";
 import { useCart } from "../../context/CartContext";
 import { productAPI, apiError } from "../../services/api";
 import { formatEUR, discountPercent, categoryLabel } from "../../utils/format";
+import ProductReviews, { ReviewsBadge } from "./ProductReviews";
 
 // Página de um produto:  /produto/:slug
 const Products = () => {
   const { slug } = useParams();
   const [searchParams] = useSearchParams();
-  const { addItem } = useCart();
+  const { addItem, items: cartItems } = useCart();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -64,6 +65,28 @@ const Products = () => {
   const hasSizes = product?.sizes?.length > 0;
   const images = product?.images || [];
 
+  // ---------- Stock ----------
+  const tracked = Boolean(product?.trackStock);
+  const colorName = color?.name || "";
+  const stockFor = (s, c = colorName) =>
+    !tracked ? Infinity : product.variants.find((v) => v.size === s && v.color === c)?.stock ?? 0;
+  const colorSoldOut = (c) => tracked && (hasSizes ? product.sizes : [""]).every((s) => stockFor(s, c) === 0);
+  const soldOut = tracked && product.stock === 0;
+  // Quantas ainda pode juntar (tira o que já está no carrinho)
+  const chosenSize = hasSizes ? size : "";
+  const inCart = cartItems.find((i) => i.key === [product?._id, chosenSize, colorName].join("|"))?.quantity || 0;
+  const available = hasSizes && !size ? Infinity : stockFor(chosenSize) - inCart;
+  const maxQty = Math.max(0, Math.min(99, available));
+  const variantSoldOut = (!hasSizes || size) && stockFor(chosenSize) === 0;
+
+  // Mudar de cor pode deixar o tamanho escolhido sem stock: limpa a escolha e acerta a quantidade
+  useEffect(() => {
+    if (size && tracked && stockFor(size) === 0) setSize("");
+  }, [colorName]);
+  useEffect(() => {
+    if (maxQty > 0 && quantity > maxQty) setQuantity(maxQty);
+  }, [maxQty]);
+
   // Escolher uma cor mostra a foto dessa cor
   const pickColor = (c) => {
     setColor(c);
@@ -79,6 +102,7 @@ const Products = () => {
 
   const handleAddToCart = () => {
     if (hasSizes && !size) { setSizeError(true); return; }
+    if (maxQty < 1) return;
     addItem(product, {
       size,
       color: color ? { name: color.name, hex: color.hex } : null,
@@ -137,6 +161,7 @@ const Products = () => {
                 <h1 className="text-2xl sm:text-3xl font-semibold">{product.name}</h1>
                 <FavoriteButton productId={product._id} name={product.name} size="lg" className="shrink-0 border border-zinc-200" />
               </div>
+              <div className="mt-1"><ReviewsBadge rating={product.rating} count={product.numReviews} /></div>
               <p className="text-sm mt-3 leading-relaxed whitespace-pre-line text-zinc-700">{product.description}</p>
 
               {hasSizes ? (
@@ -145,19 +170,26 @@ const Products = () => {
                   <fieldset className="mt-3">
                     <legend className="font-semibold text-sm">Tamanho</legend>
                     <div className="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-invalid={sizeError}>
-                      {product.sizes.map((s) => (
-                        <button
-                          key={s}
-                          role="radio"
-                          aria-checked={size === s}
-                          onClick={() => { setSize(s); setSizeError(false); }}
-                          className={`min-w-[44px] h-10 px-3 border text-sm rounded-sm transition-colors ${
-                            size === s ? "bg-black text-white border-black" : sizeError ? "border-red-700" : "border-zinc-300 hover:border-black"
-                          }`}
-                        >
-                          {s}
-                        </button>
-                      ))}
+                      {product.sizes.map((s) => {
+                        const out = stockFor(s) === 0;
+                        return (
+                          <button
+                            key={s}
+                            role="radio"
+                            aria-checked={size === s}
+                            disabled={out}
+                            aria-label={out ? `${s} (esgotado)` : s}
+                            title={out ? "Esgotado" : undefined}
+                            onClick={() => { setSize(s); setSizeError(false); }}
+                            className={`relative min-w-[44px] h-10 px-3 border text-sm rounded-sm transition-colors ${
+                              out ? "border-zinc-200 text-zinc-300 line-through cursor-not-allowed bg-zinc-50"
+                              : size === s ? "bg-black text-white border-black" : sizeError ? "border-red-700" : "border-zinc-300 hover:border-black"
+                            }`}
+                          >
+                            {s}
+                          </button>
+                        );
+                      })}
                     </div>
                     {sizeError && <p className="text-xs text-red-700 font-semibold mt-1.5">Escolhe um tamanho primeiro.</p>}
                   </fieldset>
@@ -171,19 +203,23 @@ const Products = () => {
                 <fieldset className="mt-5">
                   <legend className="text-sm font-semibold">Cor: <span className="font-normal capitalize">{color?.name}</span></legend>
                   <div className="mt-2 flex flex-wrap gap-2" role="radiogroup">
-                    {product.colors.map((c) => (
-                      <button
-                        key={c.name}
-                        role="radio"
-                        aria-checked={color?.name === c.name}
-                        onClick={() => pickColor(c)}
-                        aria-label={c.name}
-                        title={c.name}
-                        className={`w-9 h-9 rounded-full border-2 p-0.5 ${color?.name === c.name ? "border-black" : "border-transparent"}`}
-                      >
-                        <span className="block w-full h-full rounded-full border border-black/10" style={{ backgroundColor: c.hex }} />
-                      </button>
-                    ))}
+                    {product.colors.map((c) => {
+                      const out = colorSoldOut(c.name);
+                      return (
+                        <button
+                          key={c.name}
+                          role="radio"
+                          aria-checked={color?.name === c.name}
+                          onClick={() => pickColor(c)}
+                          aria-label={out ? `${c.name} (esgotado)` : c.name}
+                          title={out ? `${c.name} — esgotado` : c.name}
+                          className={`relative w-9 h-9 rounded-full border-2 p-0.5 ${color?.name === c.name ? "border-black" : "border-transparent"}`}
+                        >
+                          <span className={`block w-full h-full rounded-full border border-black/10 ${out ? "opacity-40" : ""}`} style={{ backgroundColor: c.hex }} />
+                          {out && <span aria-hidden="true" className="absolute left-1/2 top-1/2 w-[120%] h-0.5 bg-zinc-500 -translate-x-1/2 -translate-y-1/2 -rotate-45" />}
+                        </button>
+                      );
+                    })}
                   </div>
                 </fieldset>
               )}
@@ -193,8 +229,14 @@ const Products = () => {
                 <div className="flex items-center mt-2">
                   <button aria-label="Diminuir" className="w-10 h-10 bg-black text-white rounded-sm text-lg" onClick={() => setQuantity(p => Math.max(1, p-1))}>-</button>
                   <span className="w-12 text-center">{quantity}</span>
-                  <button aria-label="Aumentar" className="w-10 h-10 bg-black text-white rounded-sm text-lg" onClick={() => setQuantity(p => Math.min(99, p+1))}>+</button>
+                  <button aria-label="Aumentar" disabled={quantity >= maxQty} className="w-10 h-10 bg-black text-white rounded-sm text-lg disabled:opacity-30" onClick={() => setQuantity(p => Math.min(maxQty, p+1))}>+</button>
                 </div>
+                {tracked && !variantSoldOut && Number.isFinite(available) && available > 0 && available <= 3 && (
+                  <p className="text-xs font-semibold text-amber-700 mt-2">{available === 1 ? "Só resta 1 unidade!" : `Só restam ${available} unidades!`}</p>
+                )}
+                {tracked && Number.isFinite(available) && available <= 0 && inCart > 0 && stockFor(chosenSize) > 0 && (
+                  <p className="text-xs text-zinc-600 mt-2">Já tens no carrinho todas as unidades disponíveis.</p>
+                )}
               </div>
 
               <div className="mt-6">
@@ -209,9 +251,12 @@ const Products = () => {
               <div className="mt-6 flex flex-col sm:flex-row sm:items-center gap-3">
                 <button
                   onClick={handleAddToCart}
-                  className={`w-full sm:w-auto py-3 px-10 text-white text-sm font-semibold rounded-sm transition-colors ${added ? "bg-green-700" : "bg-black hover:bg-zinc-800"}`}
+                  disabled={soldOut || variantSoldOut || (Number.isFinite(available) && available <= 0)}
+                  className={`w-full sm:w-auto py-3 px-10 text-white text-sm font-semibold rounded-sm transition-colors disabled:bg-zinc-300 disabled:cursor-not-allowed ${added ? "bg-green-700" : "bg-black hover:bg-zinc-800"}`}
                 >
-                  {added ? "✓ Adicionado ao carrinho" : "Adicionar ao carrinho"}
+                  {soldOut ? "Esgotado"
+                    : variantSoldOut ? (product.hasColors ? `Esgotado em ${colorName}` : "Esgotado")
+                    : added ? "✓ Adicionado ao carrinho" : "Adicionar ao carrinho"}
                 </button>
                 {added && (
                   <Link to="/cart" className="text-center text-sm font-semibold underline underline-offset-4 hover:text-red-800">Ver carrinho</Link>
@@ -221,6 +266,8 @@ const Products = () => {
           </div>
         )}
       </div>
+
+      {product && <ProductReviews productId={product._id} />}
 
       {!error && (relatedLoading || related.length > 0) && (
         <section className="w-full mt-12 sm:mt-20 mb-16 sm:mb-20">

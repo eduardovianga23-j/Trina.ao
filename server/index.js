@@ -10,6 +10,9 @@ import userRoutes from './routes/users.js';
 import uploadRoutes from './routes/uploads.js';
 import paymentRoutes from './routes/payments.js';
 import { stripeEnabled } from './utils/stripe.js';
+import { verifyMail } from './utils/mailer.js';
+import { sweepOrders } from './controllers/orderController.js';
+import reviewRoutes from './routes/reviews.js';
 import { UPLOAD_DIR, storageMode } from './utils/storage.js';
 
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
@@ -35,6 +38,7 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/uploads', uploadRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 // Health check
 app.get('/', (req, res) => res.json({ message: 'Trina.ao API running 🚀' }));
@@ -56,6 +60,10 @@ mongoose
       console.log(stripeEnabled()
         ? `💳 Pagamentos Stripe ativos (${process.env.STRIPE_SECRET_KEY.startsWith('sk_live') ? 'modo REAL' : 'modo de teste'})`
         : '💳 Pagamentos desligados: falta STRIPE_SECRET_KEY no server/.env');
+      verifyMail().then(console.log);
+      // Confirma pagamentos e devolve ao stock as peças de pagamentos abandonados
+      setTimeout(sweepOrders, 15 * 1000);
+      setInterval(sweepOrders, 5 * 60 * 1000);
     });
   })
   .catch((err) => console.error('❌ MongoDB error:', err.message));

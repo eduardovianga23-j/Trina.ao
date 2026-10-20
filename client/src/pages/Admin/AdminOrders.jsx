@@ -4,6 +4,7 @@ import AdminLayout from './AdminLayout';
 import { orderAPI, apiError } from '../../services/api';
 import { formatEUR } from '../../utils/format';
 import { PAYMENT_METHOD, PAYMENT_STATUS, fmtDateTime, orderNumber, statusBadge } from '../../utils/orders';
+import DeliveryTimeline from '../../assets/components/ui/DeliveryTimeline';
 
 /*
   /admin/encomendas — só o administrador principal.
@@ -13,7 +14,8 @@ import { PAYMENT_METHOD, PAYMENT_STATUS, fmtDateTime, orderNumber, statusBadge }
 const VIEWS = [
   ['enviar', 'Para enviar'],
   ['aguardar', 'À espera de Multibanco'],
-  ['enviadas', 'Enviadas'],
+  ['caminho', 'A caminho'],
+  ['entregues', 'Entregues'],
   ['todas', 'Todas'],
 ];
 
@@ -25,7 +27,8 @@ const OrderRow = ({ order, onChange }) => {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [label, cls] = order.paymentStatus === 'awaiting' && order.orderStatus !== 'cancelled'
     ? ['Por pagar (Multibanco)', 'bg-amber-100 text-amber-800']
-    : order.paymentStatus === 'failed' ? ['Não paga', 'bg-zinc-200 text-zinc-700'] : statusBadge(order);
+    : order.paymentStatus === 'failed' ? ['Não paga', 'bg-zinc-200 text-zinc-700']
+    : order.receivedAt ? ['Recebida pelo cliente ✓', 'bg-green-100 text-green-800'] : statusBadge(order);
   const a = order.shippingAddress || {};
   const qty = order.items.reduce((acc, i) => acc + i.quantity, 0);
 
@@ -100,6 +103,16 @@ const OrderRow = ({ order, onChange }) => {
             {order.notes && <p className="mt-2 bg-amber-50 rounded px-3 py-2"><strong>Nota:</strong> {order.notes}</p>}
 
             {order.paymentStatus === 'paid' && order.orderStatus !== 'cancelled' && (
+              <div className="mt-5">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500 mb-2">Entrega</h3>
+                <DeliveryTimeline order={order} compact />
+                {order.orderStatus === 'delivered' && !order.receivedAt && (
+                  <p className="text-xs text-amber-800 bg-amber-50 rounded px-3 py-2">À espera de o cliente confirmar que recebeu. Já lhe enviámos um email a pedir.</p>
+                )}
+              </div>
+            )}
+
+            {order.paymentStatus === 'paid' && ['processing', 'confirmed', 'shipped'].includes(order.orderStatus) && (
               <div className="mt-5 grid gap-3">
                 <div>
                   <label htmlFor={`trk-${order._id}`} className="block text-xs font-semibold mb-1">Número de seguimento (opcional)</label>
@@ -115,7 +128,7 @@ const OrderRow = ({ order, onChange }) => {
                   )}
                   {order.orderStatus === 'shipped' && (
                     <>
-                      <button disabled={busy} onClick={() => update({ orderStatus: 'delivered' })} className={`${btn} bg-black hover:bg-zinc-800 text-white`}>Marcar como entregue</button>
+                      <button disabled={busy} onClick={() => update({ orderStatus: 'delivered' })} className={`${btn} bg-green-700 hover:bg-green-800 text-white`}>Confirmar entrega feita</button>
                       {tracking !== (order.trackingNumber || '') && (
                         <button disabled={busy} onClick={() => update({ trackingNumber: tracking })} className={`${btn} border border-zinc-300`}>Guardar n.º de seguimento</button>
                       )}

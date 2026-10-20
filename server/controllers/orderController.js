@@ -3,6 +3,11 @@ import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import { getStripe, stripeEnabled, stripeMessage } from '../utils/stripe.js';
 import { shippingConfig, shippingFor } from '../utils/shipping.js';
+import { reserveStock, releaseOrderStock, lowStockFor } from '../utils/stock.js';
+import {
+  emailOrderPaid, emailMultibanco, emailShipped, emailDelivered, emailCancelled,
+  emailAdminNewOrder, emailAdminReceived,
+} from '../utils/emails.js';
 
 /*
   Como funciona uma compra:
@@ -10,7 +15,11 @@ import { shippingConfig, shippingFor } from '../utils/shipping.js';
   2. O servidor confirma os produtos e os preços na base de dados (nunca confia nos preços do navegador),
      cria a encomenda "por pagar" e uma página de pagamento no Stripe.
   3. O cliente paga no Stripe (MB WAY, Multibanco, cartão...) e volta para /encomenda/:id
-  4. O estado do pagamento é confirmado diretamente com o Stripe (webhook e ao abrir a encomenda).
+  4. O estado do pagamento é confirmado diretamente com o Stripe (webhook, ao abrir a encomenda
+     e de 5 em 5 minutos pelo próprio servidor).
+  5. Entrega: Em preparação → A caminho (a loja envia) → Entregue (a loja confirma) → o cliente confirma
+     que recebeu e pode avaliar os produtos.
+  As peças saem do stock quando o cliente vai pagar e voltam se o pagamento não for feito.
 */
 
 const cents = (eur) => Math.round(Number(eur) * 100);
@@ -56,7 +65,7 @@ const readItems = async (rawItems) => {
 
   const ids = [...new Set(rawItems.map((i) => String(i?.product)))];
   if (ids.some((id) => !mongoose.isValidObjectId(id))) return { error: 'Há um produto inválido no carrinho' };
-  const products = await Product.find({ _id: { $in: ids }, active: true }).select('name images price sizes hasColors colors');
+  const products = await Product.find({ _id: { $in: ids }, active: true }).select('name images price sizes hasColors colors trackStock variants');
   const byId = new Map(products.map((p) => [String(p._id), p]));
 
   const items = [];
@@ -85,7 +94,7 @@ const readItems = async (rawItems) => {
       color: color ? { name: color.name, hex: color.hex } : undefined,
     });
   }
-  return { items };
+  return { items, productsById: byId };
 };
 
 const createCheckoutSession = (order, user) => {
@@ -120,6 +129,8 @@ const createCheckoutSession = (order, user) => {
         fixed_amount: { amount: cents(order.shippingCost), currency: 'eur' },
       },
     }],
+    // A página de pagamento fecha ao fim de 31 minutos (as peças reservadas voltam ao stock)
+    expires_at: Math.floor(Date.now() / 1000) + 31 * 60,
     success_url: `${clientUrl()}/encomenda/${order._id}?pago=1`,
     cancel_url: `${clientUrl()}/cart?cancelado=${order._id}`,
   });
@@ -139,11 +150,14 @@ const markPaid = async (order, method, piId) => {
     },
     { new: true }
   );
-  // Só a primeira confirmação conta as vendas (o webhook e a página podem chegar ao mesmo tempo)
+  // Só a primeira confirmação conta as vendas e envia os emails (o webhook e a página podem chegar ao mesmo tempo)
   if (updated) {
     await Product.bulkWrite(updated.items.map((i) => ({
       updateOne: { filter: { _id: i.product }, update: { $inc: { sold: i.quantity } } },
     })));
+    await updated.populate('user', 'name email');
+    emailOrderPaid(updated);
+    lowStockFor(updated.items).then((low) => emailAdminNewOrder(updated, low)).catch(() => emailAdminNewOrder(updated));
   }
   return updated || Order.findById(order._id);
 };
@@ -163,40 +177,48 @@ export const applySession = async (order, session) => {
   }
 
   if (session.status === 'expired') {
-    return (await Order.findOneAndUpdate(
+    const expired = await Order.findOneAndUpdate(
       { _id: order._id, paymentStatus: 'pending' },
       { paymentStatus: 'expired', orderStatus: 'cancelled' },
       { new: true }
-    )) || order;
+    );
+    if (expired) await releaseOrderStock(order._id);
+    return expired || order;
   }
 
   // Pagamento diferido (Multibanco): a sessão terminou mas o dinheiro ainda não chegou
   if (session.status === 'complete' && session.payment_status === 'unpaid') {
     if (pi && ['canceled', 'requires_payment_method'].includes(pi.status)) {
-      return (await Order.findOneAndUpdate(
+      const failed = await Order.findOneAndUpdate(
         { _id: order._id, paymentStatus: { $in: ['pending', 'awaiting'] } },
         { paymentStatus: 'failed', orderStatus: 'cancelled' },
         { new: true }
-      )) || order;
+      ).populate('user', 'name email');
+      if (failed) {
+        await releaseOrderStock(order._id);
+        emailCancelled(failed, 'O prazo para pagar a referência Multibanco terminou.');
+      }
+      return failed || order;
     }
     const mb = pi?.next_action?.multibanco_display_details;
-    return (await Order.findOneAndUpdate(
-      { _id: order._id, paymentStatus: { $in: ['pending', 'awaiting'] } },
-      {
-        paymentStatus: 'awaiting',
-        ...(method && { paymentMethod: method }),
-        ...(pi?.id && { stripePaymentIntentId: pi.id }),
-        ...(mb && {
-          multibanco: {
-            entity: mb.entity,
-            reference: mb.reference,
-            expiresAt: mb.expires_at ? new Date(mb.expires_at * 1000) : undefined,
-            voucherUrl: mb.hosted_voucher_url,
-          },
-        }),
-      },
-      { new: true }
-    )) || order;
+    const changes = {
+      paymentStatus: 'awaiting',
+      ...(method && { paymentMethod: method }),
+      ...(pi?.id && { stripePaymentIntentId: pi.id }),
+      ...(mb && {
+        multibanco: {
+          entity: mb.entity,
+          reference: mb.reference,
+          expiresAt: mb.expires_at ? new Date(mb.expires_at * 1000) : undefined,
+          voucherUrl: mb.hosted_voucher_url,
+        },
+      }),
+    };
+    // Primeira vez (pending → awaiting): envia os dados de pagamento por email
+    let awaiting = await Order.findOneAndUpdate({ _id: order._id, paymentStatus: 'pending' }, changes, { new: true }).populate('user', 'name email');
+    if (awaiting?.multibanco?.reference) emailMultibanco(awaiting);
+    if (!awaiting) awaiting = await Order.findOneAndUpdate({ _id: order._id, paymentStatus: 'awaiting' }, changes, { new: true });
+    return awaiting || order;
   }
   return order;
 };
@@ -239,16 +261,21 @@ export const checkout = async (req, res) => {
   try {
     const addr = readAddress(req.body);
     if (addr.error) return res.status(400).json({ message: addr.error });
-    const { items, error } = await readItems(req.body?.items);
+    const { items, productsById, error } = await readItems(req.body?.items);
     if (error) return res.status(400).json({ message: error });
 
     const subtotalC = items.reduce((acc, i) => acc + cents(i.price) * i.quantity, 0);
     const shippingC = cents(shippingFor(subtotalC / 100));
     if (subtotalC + shippingC < 50) return res.status(400).json({ message: 'O valor mínimo de uma encomenda é 0,50 €' });
 
+    // Reserva as peças (o stock desce já; volta se o pagamento não for feito)
+    const stock = await reserveStock(items, productsById);
+    if (stock.error) return res.status(409).json({ message: stock.error });
+
     const order = await Order.create({
       user: req.user._id,
       items,
+      stockReserved: stock.reservedAny,
       shippingAddress: addr.address,
       nif: addr.nif,
       notes: addr.notes,
@@ -263,6 +290,7 @@ export const checkout = async (req, res) => {
       await order.save();
       res.status(201).json({ orderId: order._id, url: session.url });
     } catch (err) {
+      await releaseOrderStock(order._id);
       await Order.deleteOne({ _id: order._id });
       console.error('Stripe (criar pagamento):', err.message);
       res.status(502).json({ message: stripeMessage(err) });
@@ -318,16 +346,39 @@ export const getOrderById = async (req, res) => {
   }
 };
 
+// POST /api/orders/:id/received — o cliente confirma que recebeu a encomenda
+export const confirmReceived = async (req, res) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Encomenda não encontrada' });
+    const order = await Order.findOne({ _id: req.params.id, user: req.user._id });
+    if (!order) return res.status(404).json({ message: 'Encomenda não encontrada' });
+    if (order.receivedAt) return res.json(publicOrder(order));
+    if (order.paymentStatus !== 'paid' || !['shipped', 'delivered'].includes(order.orderStatus)) {
+      return res.status(400).json({ message: 'Só podes confirmar depois de a encomenda ser enviada' });
+    }
+    order.receivedAt = new Date();
+    order.orderStatus = 'delivered';
+    if (!order.deliveredAt) order.deliveredAt = order.receivedAt;
+    await order.save();
+    await order.populate('user', 'name email');
+    emailAdminReceived(order);
+    res.json(publicOrder(order));
+  } catch (err) {
+    res.status(500).json({ message: 'Erro no servidor' });
+  }
+};
+
 // ---------- Administração ----------
 
 const ADMIN_VIEWS = {
   enviar: { paymentStatus: 'paid', orderStatus: { $in: ['processing', 'confirmed'] } },
-  aguardar: { paymentStatus: 'awaiting' },
-  enviadas: { paymentStatus: 'paid', orderStatus: { $in: ['shipped', 'delivered'] } },
+  aguardar: { paymentStatus: 'awaiting', orderStatus: { $ne: 'cancelled' } },
+  caminho: { paymentStatus: 'paid', orderStatus: 'shipped' },
+  entregues: { paymentStatus: 'paid', orderStatus: 'delivered' },
   todas: { paymentStatus: { $in: REAL_ORDER } },
 };
 
-// GET /api/orders?view=enviar|aguardar|enviadas|todas
+// GET /api/orders?view=enviar|aguardar|caminho|entregues|todas
 export const getAllOrders = async (req, res) => {
   try {
     const view = ADMIN_VIEWS[req.query.view] ? req.query.view : 'enviar';
@@ -345,40 +396,85 @@ export const getAllOrders = async (req, res) => {
   }
 };
 
-// PUT /api/orders/:id/status  { orderStatus, trackingNumber }
+/*
+  PUT /api/orders/:id/status  { orderStatus, trackingNumber }
+  - shipped:   a encomenda saiu (a caminho)  → email ao cliente com o n.º de seguimento
+  - delivered: a loja confirma a entrega     → email a pedir confirmação e avaliação
+  - cancelled: as peças voltam ao stock      → email ao cliente
+*/
 export const updateOrderStatus = async (req, res) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Encomenda não encontrada' });
-    const order = await Order.findById(req.params.id);
+    const order = await Order.findById(req.params.id).populate('user', 'name email');
     if (!order || !REAL_ORDER.includes(order.paymentStatus)) return res.status(404).json({ message: 'Encomenda não encontrada' });
 
+    if (req.body?.trackingNumber !== undefined) order.trackingNumber = clean(req.body.trackingNumber, 60);
     const { orderStatus } = req.body || {};
-    if (orderStatus !== undefined) {
-      if (!['processing', 'shipped', 'delivered', 'cancelled'].includes(orderStatus)) {
-        return res.status(400).json({ message: 'Estado inválido' });
-      }
-      if (orderStatus !== 'cancelled' && order.paymentStatus !== 'paid') {
-        return res.status(400).json({ message: 'Só podes enviar encomendas que já estão pagas' });
-      }
-      // Cancelar uma referência Multibanco por pagar: anula-a no Stripe
-      if (orderStatus === 'cancelled' && order.paymentStatus === 'awaiting' && order.stripePaymentIntentId) {
-        try {
-          await getStripe()?.paymentIntents.cancel(order.stripePaymentIntentId);
-        } catch (err) {
-          console.error('Stripe (cancelar referência):', err.message);
-          return res.status(502).json({ message: 'Não foi possível anular a referência Multibanco. Tenta novamente.' });
+    let email = null;
+
+    if (orderStatus !== undefined && orderStatus !== order.orderStatus) {
+      if (orderStatus === 'shipped') {
+        if (order.paymentStatus !== 'paid' || !['processing', 'confirmed'].includes(order.orderStatus)) {
+          return res.status(400).json({ message: 'Só podes enviar encomendas pagas que ainda estão em preparação' });
         }
-        order.paymentStatus = 'failed';
+        order.shippedAt = new Date();
+        email = emailShipped;
+      } else if (orderStatus === 'delivered') {
+        if (order.orderStatus !== 'shipped') return res.status(400).json({ message: 'Primeiro marca a encomenda como enviada' });
+        order.deliveredAt = new Date();
+        email = emailDelivered;
+      } else if (orderStatus === 'cancelled') {
+        if (order.orderStatus === 'delivered') return res.status(400).json({ message: 'Uma encomenda entregue já não pode ser cancelada' });
+        // Referência Multibanco por pagar: anula-a no Stripe
+        if (order.paymentStatus === 'awaiting' && order.stripePaymentIntentId) {
+          try {
+            await getStripe()?.paymentIntents.cancel(order.stripePaymentIntentId);
+          } catch (err) {
+            console.error('Stripe (cancelar referência):', err.message);
+            return res.status(502).json({ message: 'Não foi possível anular a referência Multibanco. Tenta novamente.' });
+          }
+          order.paymentStatus = 'failed';
+        }
+        email = emailCancelled;
+      } else {
+        return res.status(400).json({ message: 'Estado inválido' });
       }
       order.orderStatus = orderStatus;
     }
-    if (req.body?.trackingNumber !== undefined) order.trackingNumber = clean(req.body.trackingNumber, 60);
 
     await order.save();
-    await order.populate('user', 'name email');
+    if (order.orderStatus === 'cancelled') await releaseOrderStock(order._id);
+    if (email) email(order);
     res.json(publicOrder(order));
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: 'Erro no servidor' });
+  }
+};
+
+/*
+  Verificação automática (de 5 em 5 minutos):
+  - pagamentos abandonados há mais de 32 minutos: fecha-os e devolve as peças ao stock;
+  - referências Multibanco por pagar: confirma se já foram pagas.
+  Assim tudo funciona mesmo sem o webhook do Stripe (ex.: no teu PC).
+*/
+export const sweepOrders = async () => {
+  try {
+    const old = new Date(Date.now() - 32 * 60 * 1000);
+    // Encomendas que nunca chegaram a ter página de pagamento
+    const orphans = await Order.find({ paymentStatus: 'pending', stripeSessionId: { $exists: false }, createdAt: { $lt: old } }).limit(50);
+    for (const o of orphans) {
+      await Order.updateOne({ _id: o._id, paymentStatus: 'pending' }, { paymentStatus: 'expired', orderStatus: 'cancelled' });
+      await releaseOrderStock(o._id);
+    }
+    if (!stripeEnabled()) return;
+    const toCheck = await Order.find({
+      stripeSessionId: { $exists: true },
+      $or: [{ paymentStatus: 'pending', createdAt: { $lt: old } }, { paymentStatus: 'awaiting' }],
+    }).sort({ createdAt: 1 }).limit(50);
+    for (const o of toCheck) await trySync(o);
+  } catch (err) {
+    console.error('Verificação automática das encomendas:', err.message);
   }
 };
 

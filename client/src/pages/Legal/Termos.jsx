@@ -43,6 +43,11 @@ const Termos = () => (
       Podes criar conta com email e senha, ou com a tua conta Google. És responsável por manter a tua senha em segredo e
       por nos dares dados verdadeiros. Podemos suspender contas usadas de forma fraudulenta ou abusiva.
     </p>
+    <p>
+      Depois de confirmares que recebeste uma encomenda, podes avaliar os produtos com estrelas, um comentário e fotos.
+      As avaliações são públicas (com o teu primeiro nome e a inicial do apelido) e têm de ser verdadeiras e respeitosas.
+      Podemos remover avaliações ofensivas, falsas ou com fotos inadequadas.
+    </p>
 
     <H2 id="produtos">3. Produtos e preços</H2>
     <ul>

@@ -43,6 +43,7 @@ const Privacidade = () => (
       <li><strong>Pagamentos:</strong> são processados pela Stripe (MB WAY, Multibanco, cartão e outros). <strong>Não guardamos os dados do teu cartão.</strong></li>
       <li><strong>No teu navegador:</strong> o conteúdo do carrinho e a sessão iniciada ficam guardados no teu próprio dispositivo (ver <a href="#cookies">cookies</a>).</li>
       <li><strong>Favoritos:</strong> os produtos que guardas com o coração, associados à tua conta.</li>
+      <li><strong>Avaliações:</strong> a nota, o comentário e as fotos que publicares sobre um produto. Aparecem na página do produto com o teu primeiro nome e a inicial do apelido.</li>
       <li><strong>Comunicações:</strong> o que nos escreveres quando nos contactas.</li>
     </ul>
 
@@ -62,6 +63,7 @@ const Privacidade = () => (
       <li><strong>Imagens do site</strong>: Cloudinary, quando utilizado.</li>
       <li><strong>Início de sessão</strong>: Google, se escolheres entrar com o Google.</li>
       <li><strong>Pagamentos</strong>: Stripe, que recebe o teu email e o valor da encomenda e trata os dados de pagamento (MB WAY, Multibanco, cartão...).</li>
+      <li><strong>Envio de emails</strong>: Google (Gmail), para te enviarmos os emails sobre as tuas encomendas.</li>
       <li><strong>Entregas</strong>: a transportadora, que recebe o teu nome, a morada e o contacto.</li>
       <li><strong>Autoridades</strong>, quando a lei o exigir.</li>
     </ul>

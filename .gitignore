@@ -7,3 +7,6 @@ build/
 
 # Fotos enviadas pelo admin (ficam só no teu PC / servidor)
 server/uploads/
+
+# Emails guardados para pré-visualização (quando o Gmail não está configurado)
+server/emails/

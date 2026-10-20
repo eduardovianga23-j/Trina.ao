@@ -8,13 +8,14 @@ const orderItemSchema = new mongoose.Schema({
   quantity: { type: Number, required: true, min: 1 },
   size: { type: String, default: '' },
   color: { type: new mongoose.Schema({ name: String, hex: String }, { _id: false }), default: undefined },
+  reserved: { type: Boolean, default: false }, // esta peça saiu do stock quando o cliente foi pagar
 });
 
 /*
   Estados:
   - paymentStatus: pending (ainda a pagar) · awaiting (referência Multibanco criada, à espera)
                    · paid (pago) · failed (o pagamento falhou ou a referência expirou) · expired (desistiu)
-  - orderStatus:   awaiting_payment · processing (pago, a preparar) · shipped (enviada)
+  - orderStatus:   awaiting_payment · processing (pago, a preparar) · shipped (a caminho)
                    · delivered (entregue) · cancelled (cancelada)
 */
 const orderSchema = new mongoose.Schema(
@@ -45,6 +46,11 @@ const orderSchema = new mongoose.Schema(
     },
     paidAt: Date,
     trackingNumber: { type: String, default: '' },
+    // Acompanhamento da entrega
+    shippedAt: Date,   // a loja enviou (a caminho)
+    deliveredAt: Date, // a loja confirmou a entrega
+    receivedAt: Date,  // o cliente confirmou que recebeu
+    stockReserved: { type: Boolean, default: false },
 
     // Ligação ao Stripe
     stripeSessionId: { type: String, index: true },

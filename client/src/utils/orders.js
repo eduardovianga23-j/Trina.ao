@@ -6,7 +6,7 @@ export const ORDER_STATUS = {
   awaiting_payment: ['À espera de pagamento', 'bg-amber-100 text-amber-800'],
   processing: ['Em preparação', 'bg-blue-100 text-blue-800'],
   confirmed: ['Em preparação', 'bg-blue-100 text-blue-800'],
-  shipped: ['Enviada', 'bg-indigo-100 text-indigo-800'],
+  shipped: ['A caminho', 'bg-indigo-100 text-indigo-800'],
   delivered: ['Entregue', 'bg-green-100 text-green-800'],
   cancelled: ['Cancelada', 'bg-zinc-200 text-zinc-700'],
 };
@@ -33,6 +33,14 @@ export const orderNumber = (id) => String(id).slice(-6).toUpperCase();
 export const fmtDate = (d) => new Date(d).toLocaleDateString('pt-PT', { day: 'numeric', month: 'long', year: 'numeric' });
 export const fmtDateTime = (d) =>
   new Date(d).toLocaleString('pt-PT', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+// Passos da entrega (para a linha do tempo)
+export const deliverySteps = (order) => [
+  { key: 'paid', label: 'Pagamento confirmado', date: order.paidAt },
+  { key: 'shipped', label: 'A caminho', date: order.shippedAt },
+  { key: 'delivered', label: 'Entregue', date: order.deliveredAt },
+  { key: 'received', label: 'Recebida pelo cliente', date: order.receivedAt },
+];
 
 // Estado da encomenda com cor
 export const statusBadge = (order) => ORDER_STATUS[order.orderStatus] || [order.orderStatus, 'bg-zinc-100 text-zinc-700'];
