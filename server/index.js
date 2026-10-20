@@ -1,4 +1,7 @@
 import 'dotenv/config';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
@@ -25,9 +28,37 @@ if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const IS_PROD = process.env.NODE_ENV === 'production';
 
-// Segurança: cabeçalhos de proteção (anti-clickjacking, sem "X-Powered-By", etc.)
-app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+// Site já construído (client/dist). Online, o mesmo servidor mostra o site e a API.
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const CLIENT_DIST = path.join(__dirname, '..', 'client', 'dist');
+const SERVE_CLIENT = fs.existsSync(path.join(CLIENT_DIST, 'index.html')) && process.env.SERVE_CLIENT !== '0';
+
+// Online o servidor fica atrás de um "proxy" (Render, Railway...): assim os limites usam o IP verdadeiro
+if (IS_PROD || process.env.TRUST_PROXY) app.set('trust proxy', Number(process.env.TRUST_PROXY) || 1);
+
+// Segurança: cabeçalhos de proteção (anti-clickjacking, sem "X-Powered-By", regras do que a página pode carregar)
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+  // O botão "Continuar com o Google" abre uma janela da Google
+  crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  contentSecurityPolicy: {
+    useDefaults: true,
+    directives: {
+      'script-src': ["'self'", 'https://accounts.google.com/gsi/client'],
+      'style-src': ["'self'", "'unsafe-inline'", 'https://accounts.google.com/gsi/style'],
+      'img-src': ["'self'", 'data:', 'blob:', 'https:'],
+      'connect-src': ["'self'", 'https://accounts.google.com/gsi/'],
+      'frame-src': ['https://accounts.google.com/gsi/'],
+      'font-src': ["'self'", 'data:'],
+      'form-action': ["'self'"],
+      'frame-ancestors': ["'none'"],
+      ...(IS_PROD ? {} : { 'upgrade-insecure-requests': null }),
+    },
+  },
+}));
 
 // Middleware
 app.use(cors({ origin: process.env.CLIENT_URL || 'http://localhost:5173' }));
@@ -47,8 +78,29 @@ app.use('/api/uploads', uploadRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/contact', contactRoutes);
 
-// Health check
-app.get('/', (req, res) => res.json({ message: 'Trina.ao API running 🚀' }));
+// Saúde do servidor (o alojamento usa isto para saber se está tudo bem)
+app.get('/api/health', (req, res) => {
+  const db = mongoose.connection.readyState === 1;
+  res.status(db ? 200 : 503).json({ ok: db, db: db ? 'ligada' : 'desligada' });
+});
+app.use('/api', (req, res) => res.status(404).json({ message: 'Endereço da API não encontrado' }));
+
+if (SERVE_CLIENT) {
+  // Ficheiros do site (os que têm um código no nome podem ficar guardados no navegador 1 ano)
+  app.use(express.static(CLIENT_DIST, {
+    index: false,
+    setHeaders: (res, file) => {
+      res.setHeader('Cache-Control', file.includes(`${path.sep}assets${path.sep}`) ? 'public, max-age=31536000, immutable' : 'public, max-age=3600');
+    },
+  }));
+  // Todas as outras páginas (/shop, /produto/..., /conta...) são o mesmo index.html: o React trata do resto
+  app.get(/^\/(?!api\/|uploads\/).*/, (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache');
+    res.sendFile(path.join(CLIENT_DIST, 'index.html'));
+  });
+} else {
+  app.get('/', (req, res) => res.json({ message: 'Trina.ao API running 🚀' }));
+}
 
 // Erros não tratados
 app.use((err, req, res, next) => {
@@ -57,13 +109,23 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Erro no servidor' });
 });
 
+// Avisos de configuração quando o site está online
+if (IS_PROD) {
+  const warn = (m) => console.warn(`⚠️  ${m}`);
+  if (!process.env.MONGO_URI) warn('Falta MONGO_URI (a base de dados do MongoDB Atlas).');
+  if (!process.env.CLIENT_URL || process.env.CLIENT_URL.includes('localhost')) warn('CLIENT_URL deve ser o endereço do site (ex.: https://trina.pt). É usado nos emails e nos pagamentos.');
+  if (storageMode() === 'local') warn('As fotos estão a ser guardadas no disco do servidor e podem perder-se a cada atualização. Põe CLOUDINARY_URL no .env.');
+  if (stripeEnabled() && !process.env.STRIPE_WEBHOOK_SECRET) warn('Falta STRIPE_WEBHOOK_SECRET (o webhook confirma pagamentos Multibanco mesmo com o site fechado).');
+  if (!SERVE_CLIENT) warn('O site (client/dist) não foi encontrado: corre "npm run build" na pasta principal.');
+}
+
 // Connect to MongoDB
 mongoose
   .connect(process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/trina_ao')
   .then(() => {
     console.log('✅ MongoDB connected');
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT} · fotos: ${storageMode()}`);
+      console.log(`🚀 Server running on port ${PORT} · fotos: ${storageMode()}${SERVE_CLIENT ? ' · site incluído' : ''}`);
       console.log(stripeEnabled()
         ? `💳 Pagamentos Stripe ativos (${process.env.STRIPE_SECRET_KEY.startsWith('sk_live') ? 'modo REAL' : 'modo de teste'})`
         : '💳 Pagamentos desligados: falta STRIPE_SECRET_KEY no server/.env');
@@ -76,4 +138,8 @@ mongoose
       setInterval(sweepOrders, 5 * 60 * 1000);
     });
   })
-  .catch((err) => console.error('❌ MongoDB error:', err.message));
+  .catch((err) => {
+    console.error('❌ MongoDB error:', err.message);
+    // Online, sai com erro para o alojamento reiniciar o servidor sozinho
+    if (IS_PROD) process.exit(1);
+  });

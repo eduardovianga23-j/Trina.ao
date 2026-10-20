@@ -1,0 +1,27 @@
+# Verificação automática em cada pull request: o site tem de construir sem erros
+# e o servidor tem de arrancar o código sem erros de sintaxe.
+name: Verificar
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Construir o site
+        run: npm ci --prefix client && npm run build --prefix client
+      - name: Verificar o servidor
+        run: |
+          npm ci --prefix server --omit=dev
+          for f in $(git ls-files 'server/*.js' | grep -v node_modules); do node --check "$f"; done
