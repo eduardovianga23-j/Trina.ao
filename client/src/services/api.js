@@ -108,6 +108,7 @@ export const couponAPI = {
 export const reportAPI = {
   summary: (params) => api.get('/reports/summary', { params }),
   ordersCsv: (params) => api.get('/reports/orders.csv', { params, responseType: 'blob' }),
+  accountingCsv: (params) => api.get('/reports/accounting.csv', { params, responseType: 'blob' }), // sem dados pessoais
 };
 
 // "Avisa-me quando voltar"

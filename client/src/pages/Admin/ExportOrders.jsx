@@ -6,6 +6,7 @@ import { PERIODS, rangeFor } from '../../utils/periods';
   Botão "Exportar para Excel": descarrega as encomendas de um período num ficheiro .csv
   (abre diretamente no Excel, com acentos, colunas separadas e valores em euros).
   Se receber `range` ({ from, to }), usa esse período; senão mostra a escolha do período.
+  kind="accounting": versão para o contabilista (só valores, IVA e faturas, sem dados pessoais).
 */
 const download = (blob, name) => {
   const url = URL.createObjectURL(blob);
@@ -18,7 +19,7 @@ const download = (blob, name) => {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
-const ExportOrders = ({ range: fixedRange, label = 'Exportar para Excel' }) => {
+const ExportOrders = ({ range: fixedRange, label = 'Exportar para Excel', kind = 'orders' }) => {
   const [open, setOpen] = useState(false);
   const [period, setPeriod] = useState('mes');
   const [view, setView] = useState('pagas');
@@ -39,8 +40,10 @@ const ExportOrders = ({ range: fixedRange, label = 'Exportar para Excel' }) => {
     setBusy(true);
     setError('');
     try {
-      const { data } = await reportAPI.ordersCsv({ ...range, view: v });
-      download(data, `encomendas-${range.from}-a-${range.to}.csv`);
+      const { data } = kind === 'accounting'
+        ? await reportAPI.accountingCsv(range)
+        : await reportAPI.ordersCsv({ ...range, view: v });
+      download(data, `${kind === 'accounting' ? 'contabilidade' : 'encomendas'}-${range.from}-a-${range.to}.csv`);
       setOpen(false);
     } catch (err) {
       // A resposta de erro também vem como ficheiro: lê a mensagem

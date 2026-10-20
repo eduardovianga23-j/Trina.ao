@@ -81,7 +81,12 @@ const AdminStats = () => {
   const p = data?.previous;
 
   return (
-    <AdminLayout title="Estatísticas" actions={can('orders') && <ExportOrders range={range} label="Exportar este período" />}>
+    <AdminLayout title="Estatísticas" actions={
+      <div className="flex flex-wrap gap-2">
+        <ExportOrders range={range} kind="accounting" label="Exportar para a contabilidade" />
+        {can('orders') && <ExportOrders range={range} label="Exportar encomendas" />}
+      </div>
+    }>
       {/* Período (uma só linha, por cima de tudo) */}
       <div className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] -mx-1 px-1 pb-1 mb-2" role="group" aria-label="Período">
         {PERIODS.map((x) => (
