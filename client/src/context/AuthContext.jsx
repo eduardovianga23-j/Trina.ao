@@ -61,6 +61,9 @@ export const AuthProvider = ({ children }) => {
     return { ...session, created };
   };
 
+  // Guarda uma sessão devolvida pelo servidor (ex.: depois de criar uma senha nova)
+  const startSession = (data) => { save(data); return data; };
+
   const register = async (name, email, password) => {
     const { data } = await authAPI.register({ name, email, password });
     save(data);
@@ -70,7 +73,7 @@ export const AuthProvider = ({ children }) => {
   return (
     <AuthContext.Provider
       value={{
-        user, login, loginWithGoogle, register, logout, checking, updateUser,
+        user, login, loginWithGoogle, register, logout, checking, updateUser, startSession,
         // isOwner = administrador principal · isStaff = principal ou gestor (podem entrar no painel)
         isOwner: user?.role === 'admin',
         isStaff: ['admin', 'manager'].includes(user?.role),

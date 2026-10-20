@@ -6,6 +6,7 @@ import { apiError } from '../../services/api';
 import AuthField from '../../assets/components/ui/AuthField';
 import GoogleButton from '../../assets/components/ui/GoogleButton';
 import Logo from '../../assets/components/ui/Logo';
+import PasswordStrength, { MIN_PASSWORD } from '../../assets/components/ui/PasswordStrength';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -32,7 +33,7 @@ const Register = () => {
   const submit = async (e) => {
     e.preventDefault();
     setError('');
-    if (form.password.length < 6) return setError('A senha tem de ter pelo menos 6 caracteres.');
+    if (form.password.length < MIN_PASSWORD) return setError(`A senha tem de ter pelo menos ${MIN_PASSWORD} caracteres.`);
     setLoading(true);
     try {
       await register(form.name.trim(), form.email.trim(), form.password);
@@ -60,8 +61,9 @@ const Register = () => {
             value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           <AuthField icon={faEnvelope} label="Email" type="email" autoComplete="email" required
             value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-          <AuthField icon={faLock} label="Senha (mínimo 6 caracteres)" type="password" autoComplete="new-password" required minLength={6}
+          <AuthField icon={faLock} label="Senha (mínimo 8 caracteres)" type="password" autoComplete="new-password" required minLength={MIN_PASSWORD}
             value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
+          <PasswordStrength password={form.password} />
           <button disabled={loading || !form.name || !form.email || !form.password}
             className='w-full h-[50px] bg-red-800 hover:bg-red-900 disabled:opacity-60 text-white text-sm rounded-md'>
             {loading ? 'A criar conta...' : 'Registar'}

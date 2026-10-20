@@ -2,9 +2,13 @@ import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
 import User from '../models/User.js';
 import { permsOf } from '../utils/permissions.js';
+import { passwordProblem, newResetToken, hashToken } from '../utils/password.js';
+import { hit, peek, reset as resetLimit } from '../utils/rateLimit.js';
+import { emailPasswordReset, emailPasswordChanged } from '../utils/emails.js';
 
-const generateToken = (id) =>
-  jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+// sv = versão das sessões: quando a senha muda, sobe, e os tokens antigos deixam de valer
+const generateToken = (user) =>
+  jwt.sign({ id: user._id, sv: user.sessionVersion || 0 }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
 // Resposta igual para todos os tipos de login
 const session = (user) => ({
@@ -14,25 +18,26 @@ const session = (user) => ({
   role: user.role,
   avatar: user.avatar,
   permissions: permsOf(user),
-  token: generateToken(user._id),
+  token: generateToken(user),
 });
 
 const normEmail = (email) => String(email || '').trim().toLowerCase();
 
 export const register = async (req, res) => {
   try {
-    const name = String(req.body.name || '').trim();
+    const name = String(req.body.name || '').trim().slice(0, 80);
     const email = normEmail(req.body.email);
     const password = String(req.body.password || '');
     if (!name || !/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ message: 'Indica o nome e um email válido' });
-    if (password.length < 6) return res.status(400).json({ message: 'A senha tem de ter pelo menos 6 caracteres' });
+    const problem = passwordProblem(password, { email, name });
+    if (problem) return res.status(400).json({ message: problem });
 
     const exists = await User.findOne({ email });
     if (exists) {
       return res.status(400).json({
         message: exists.googleId && !exists.password
           ? 'Este email já tem conta criada com o Google. Usa o botão "Continuar com o Google".'
-          : 'Email já registado',
+          : 'Este email já tem conta. Inicia sessão ou recupera a senha.',
       });
     }
 
@@ -43,28 +48,136 @@ export const register = async (req, res) => {
   }
 };
 
+/*
+  Proteção contra quem tenta adivinhar senhas:
+  depois de 5 tentativas erradas para o mesmo email, essa conta fica bloqueada 15 minutos
+  (só para entrar com senha; recuperar a senha e o Google continuam a funcionar).
+*/
+const FAIL_WINDOW = 15 * 60 * 1000;
+const MAX_FAILS = 5;
+
 export const login = async (req, res) => {
   try {
     const email = normEmail(req.body.email);
     const password = String(req.body.password || '');
+    if (!email || !password) return res.status(400).json({ message: 'Indica o email e a senha' });
+
+    const fails = peek('login-fail', email, FAIL_WINDOW);
+    if (fails.count >= MAX_FAILS) {
+      const min = Math.max(1, Math.ceil(fails.retryInMs / 60000));
+      return res.status(429).json({
+        message: `Demasiadas tentativas erradas. Por segurança, espera ${min} ${min === 1 ? 'minuto' : 'minutos'} ou usa "Esqueci-me da senha".`,
+      });
+    }
+
     const user = await User.findOne({ email });
     if (user && user.googleId && !user.password) {
-      return res.status(401).json({ message: 'Esta conta foi criada com o Google. Usa o botão "Continuar com o Google".' });
+      return res.status(401).json({ message: 'Esta conta foi criada com o Google. Usa o botão "Continuar com o Google" ou "Esqueci-me da senha" para criar uma senha.' });
     }
     if (!user || !(await user.comparePassword(password))) {
-      return res.status(401).json({ message: 'Email ou password incorretos' });
+      const { count } = hit('login-fail', email, FAIL_WINDOW);
+      const left = MAX_FAILS - count;
+      return res.status(401).json({
+        message: left > 0 && left <= 2
+          ? `Email ou senha incorretos. ${left === 1 ? 'Resta 1 tentativa' : `Restam ${left} tentativas`} antes de a conta ficar bloqueada 15 minutos.`
+          : 'Email ou senha incorretos',
+      });
     }
+    resetLimit('login-fail', email);
     res.json(session(user));
   } catch (err) {
     res.status(500).json({ message: 'Erro no servidor' });
   }
 };
 
+// ---------- Recuperar a senha ----------
+
+const RESET_MINUTES = 60;
+const GENERIC_FORGOT = 'Se existir uma conta com esse email, enviámos um link para criares uma senha nova. Vê também a pasta de spam.';
+
+// POST /api/auth/forgot  { email } — envia o link por email (a resposta é sempre igual, para não revelar quem tem conta)
+export const forgotPassword = async (req, res) => {
+  try {
+    const email = normEmail(req.body?.email);
+    if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ message: 'Indica um email válido' });
+    // No máximo 3 emails por hora para o mesmo endereço
+    if (hit('forgot-email', email, 60 * 60 * 1000).count > 3) return res.json({ message: GENERIC_FORGOT });
+
+    const user = await User.findOne({ email });
+    if (user) {
+      const { token, hash } = newResetToken();
+      user.passwordResetHash = hash;
+      user.passwordResetExpires = new Date(Date.now() + RESET_MINUTES * 60 * 1000);
+      await user.save({ validateBeforeSave: false });
+      const base = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
+      emailPasswordReset(user, `${base}/nova-senha?token=${token}`, RESET_MINUTES);
+    }
+    res.json({ message: GENERIC_FORGOT });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Erro no servidor' });
+  }
+};
+
+// POST /api/auth/reset  { token, password } — define a senha nova e entra logo
+export const resetPassword = async (req, res) => {
+  try {
+    const token = String(req.body?.token || '');
+    const password = String(req.body?.password || '');
+    if (!/^[a-f0-9]{64}$/.test(token)) return res.status(400).json({ message: 'Este link não é válido. Pede um novo.' });
+
+    const user = await User.findOne({ passwordResetHash: hashToken(token), passwordResetExpires: { $gt: new Date() } });
+    if (!user) return res.status(400).json({ message: 'Este link já expirou ou já foi usado. Pede um novo.' });
+
+    const problem = passwordProblem(password, user);
+    if (problem) return res.status(400).json({ message: problem });
+
+    user.password = password;
+    user.passwordResetHash = undefined;
+    user.passwordResetExpires = undefined;
+    user.passwordChangedAt = new Date();
+    user.sessionVersion = (user.sessionVersion || 0) + 1; // as sessões antigas deixam de valer
+    await user.save();
+    resetLimit('login-fail', user.email);
+    emailPasswordChanged(user);
+    res.json(session(user));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Erro no servidor' });
+  }
+};
+
+// PUT /api/auth/password  { currentPassword, newPassword } — mudar a senha com sessão iniciada
+export const changePassword = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    const current = String(req.body?.currentPassword || '');
+    const next = String(req.body?.newPassword || '');
+    // Contas só com Google ainda não têm senha: podem criar uma sem indicar a atual
+    if (user.password && !(await user.comparePassword(current))) {
+      return res.status(400).json({ message: 'A senha atual não está certa' });
+    }
+    const problem = passwordProblem(next, user);
+    if (problem) return res.status(400).json({ message: problem });
+    if (user.password && current === next) return res.status(400).json({ message: 'A senha nova tem de ser diferente da atual' });
+
+    user.password = next;
+    user.passwordChangedAt = new Date();
+    user.sessionVersion = (user.sessionVersion || 0) + 1; // termina a sessão nos outros dispositivos
+    await user.save();
+    emailPasswordChanged(user);
+    res.json(session(user)); // este dispositivo continua com sessão
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Erro no servidor' });
+  }
+};
+
 export const getMe = async (req, res) => {
-  const u = await User.findById(req.user._id).select('-password -favorites').lean();
+  const u = await User.findById(req.user._id).select('-favorites').lean();
   if (!u) return res.status(404).json({ message: 'Conta não encontrada' });
-  const { googleId, ...rest } = u;
-  res.json({ ...rest, permissions: permsOf(u), google: Boolean(googleId) }); // não expõe o identificador Google, só se está ligado
+  const { googleId, password, passwordChangedAt, sessionVersion, passwordResetHash, passwordResetExpires, ...rest } = u;
+  res.json({ ...rest, permissions: permsOf(u), google: Boolean(googleId), hasPassword: Boolean(password) }); // não expõe o identificador Google, só se está ligado
 };
 
 // ---------- Google ----------

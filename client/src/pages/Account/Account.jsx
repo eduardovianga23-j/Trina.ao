@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, NavLink, Navigate, useParams } from 'react-router-dom';
+import { Link, NavLink, Navigate, useLocation, useParams } from 'react-router-dom';
 import { FaBoxOpen, FaHeart, FaUserCog, FaThLarge, FaGoogle, FaChevronRight } from 'react-icons/fa';
 import Header from '../../assets/components/header/Header';
 import TopHeader from '../../assets/components/topheader/TopHeader';
@@ -10,6 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useFavorites } from '../../context/FavoritesContext';
 import { authAPI, orderAPI, userAPI, apiError } from '../../services/api';
 import { formatEUR } from '../../utils/format';
+import PasswordStrength, { MIN_PASSWORD } from '../../assets/components/ui/PasswordStrength';
 import { PAYMENT_STATUS, fmtDate, orderNumber, statusBadge } from '../../utils/orders';
 
 /*
@@ -127,6 +128,63 @@ const SummaryTab = () => {
   );
 };
 
+// ---------- Senha ----------
+const PasswordForm = ({ hasPassword, onDone }) => {
+  const { startSession } = useAuth();
+  const [form, setForm] = useState({ current: '', next: '', confirm: '' });
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState(null);
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const field = 'w-full border border-zinc-300 rounded-md px-3 py-2.5 text-base sm:text-sm outline-none focus:border-black';
+
+  const save = async (e) => {
+    e.preventDefault();
+    setMsg(null);
+    if (form.next.length < MIN_PASSWORD) return setMsg(['err', `A senha nova tem de ter pelo menos ${MIN_PASSWORD} caracteres.`]);
+    if (form.next !== form.confirm) return setMsg(['err', 'As duas senhas novas não são iguais.']);
+    setSaving(true);
+    try {
+      const { data } = await authAPI.changePassword(form.current, form.next);
+      startSession(data);
+      setForm({ current: '', next: '', confirm: '' });
+      setMsg(['ok', hasPassword ? 'Senha alterada. As sessões noutros dispositivos foram terminadas.' : 'Senha criada. Agora também podes entrar com email e senha.']);
+      onDone?.();
+    } catch (err) {
+      setMsg(['err', apiError(err)]);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <form onSubmit={save} className="bg-white rounded-xl border border-zinc-200 p-4 sm:p-6 grid gap-3" noValidate>
+      <h2 className="font-bold">{hasPassword ? 'Mudar a senha' : 'Criar uma senha'}</h2>
+      {!hasPassword && <p className="text-xs text-zinc-500 -mt-2">Entras com o Google. Se quiseres, cria também uma senha para entrar com o email.</p>}
+      {hasPassword && (
+        <div>
+          <label htmlFor="pw-cur" className="text-sm font-semibold">Senha atual</label>
+          <input id="pw-cur" type="password" autoComplete="current-password" value={form.current} onChange={set('current')} className={`mt-1 ${field}`} />
+          <Link to="/recuperar-senha" className="text-xs text-red-800 hover:underline">Não sabes a senha atual?</Link>
+        </div>
+      )}
+      <div>
+        <label htmlFor="pw-new" className="text-sm font-semibold">Senha nova</label>
+        <input id="pw-new" type="password" autoComplete="new-password" value={form.next} onChange={set('next')} className={`mt-1 mb-3 ${field}`} />
+        <PasswordStrength password={form.next} />
+      </div>
+      <div>
+        <label htmlFor="pw-conf" className="text-sm font-semibold">Repetir a senha nova</label>
+        <input id="pw-conf" type="password" autoComplete="new-password" value={form.confirm} onChange={set('confirm')} className={`mt-1 ${field}`} />
+      </div>
+      {msg && <p role="status" className={`text-sm ${msg[0] === 'ok' ? 'text-green-700' : 'text-red-700'}`}>{msg[1]}</p>}
+      <button disabled={saving || !form.next || !form.confirm || (hasPassword && !form.current)}
+        className="justify-self-start py-2.5 px-5 bg-black hover:bg-zinc-800 disabled:opacity-50 text-white text-sm font-semibold rounded-md">
+        {saving ? 'A guardar...' : hasPassword ? 'Mudar a senha' : 'Criar senha'}
+      </button>
+    </form>
+  );
+};
+
 // ---------- Dados ----------
 const DataTab = () => {
   const { user, updateUser, logout } = useAuth();
@@ -135,7 +193,8 @@ const DataTab = () => {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);
 
-  useEffect(() => { authAPI.getMe().then(({ data }) => setMe(data)).catch(() => {}); }, []);
+  const loadMe = () => authAPI.getMe().then(({ data }) => setMe(data)).catch(() => {});
+  useEffect(() => { loadMe(); }, []);
 
   const save = async (e) => {
     e.preventDefault();
@@ -180,6 +239,8 @@ const DataTab = () => {
         </p>
       </div>
 
+      {me && <PasswordForm hasPassword={me.hasPassword} onDone={loadMe} />}
+
       <button onClick={logout} className="justify-self-start text-sm font-semibold text-red-800 hover:underline">Terminar sessão</button>
     </div>
   );
@@ -188,6 +249,7 @@ const DataTab = () => {
 // ---------- Página ----------
 const Account = () => {
   const { tab = '' } = useParams();
+  const { state } = useLocation();
   const { user } = useAuth();
   const current = TABS.find(([t]) => t === tab);
 
@@ -211,6 +273,8 @@ const Account = () => {
               <h1 className="text-xl sm:text-2xl font-bold truncate">Olá, {user.name.split(' ')[0]}</h1>
             </div>
           </div>
+
+          {state?.notice && <p role="status" className="mt-4 text-sm text-green-800 bg-green-50 border border-green-200 rounded-md px-3 py-2">{state.notice}</p>}
 
           <nav className="mt-6 flex gap-1 overflow-x-auto border-b border-zinc-200 -mx-[4%] px-[4%] sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Secções da conta">
             {TABS.map(([t, label, Icon]) => (
