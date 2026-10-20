@@ -151,3 +151,21 @@ export const emailAdminReceived = (order) => sendMail({
     <p style="margin:0">${esc(order.shippingAddress?.name || order.user?.name)} confirmou que recebeu a encomenda <strong>#${num(order)}</strong>.</p>
     <p style="margin:24px 0 0;text-align:center">${button(`${site()}/admin/encomendas`, 'Abrir no painel')}</p>`),
 });
+
+// Mensagem do formulário de contacto (responder ao email responde ao cliente)
+export const emailContact = ({ name, email, subjectLabel, order, message, account }) => sendMail({
+  to: storeEmail(),
+  replyTo: `${name.replace(/[\r\n"<>]/g, '')} <${email}>`,
+  subject: `✉️ ${subjectLabel}${order ? ` · encomenda ${order}` : ''} — ${name}`,
+  html: layout('Nova mensagem', `
+    <h1 style="font-size:20px;margin:0 0 8px">Nova mensagem do site</h1>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="font-size:13px;margin:8px 0 16px">
+      <tr><td style="padding:3px 12px 3px 0;color:#71717a">Nome</td><td><strong>${esc(name)}</strong></td></tr>
+      <tr><td style="padding:3px 12px 3px 0;color:#71717a">Email</td><td><a href="mailto:${esc(email)}">${esc(email)}</a></td></tr>
+      <tr><td style="padding:3px 12px 3px 0;color:#71717a">Assunto</td><td>${esc(subjectLabel)}</td></tr>
+      ${order ? `<tr><td style="padding:3px 12px 3px 0;color:#71717a">Encomenda</td><td>${esc(order)}</td></tr>` : ''}
+      <tr><td style="padding:3px 12px 3px 0;color:#71717a">Conta</td><td>${account ? 'Cliente com sessão iniciada' : 'Sem sessão iniciada'}</td></tr>
+    </table>
+    <div style="padding:14px;background:#fafafa;border-radius:6px;white-space:pre-wrap">${esc(message)}</div>
+    <p style="margin:16px 0 0;color:#71717a;font-size:12px">Para responder, basta carregar em "Responder" no teu email.</p>`),
+});

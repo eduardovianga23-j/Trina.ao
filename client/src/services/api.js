@@ -41,6 +41,7 @@ export const productAPI = {
   getBySlug: (slug) => api.get(`/products/slug/${encodeURIComponent(slug)}`),
   getById: (id) => api.get(`/products/${id}`),
   getRelated: (id) => api.get(`/products/${id}/related`),
+  filters: () => api.get('/products/filters'),
   getByIds: (ids) => api.get('/products/by-ids', { params: { ids: ids.join(',') } }),
   // Admin
   getAllAdmin: () => api.get('/products/admin/all'),
@@ -86,6 +87,9 @@ export const reviewAPI = {
     return api.post('/reviews/photos', form);
   },
 };
+
+// Formulário de contacto
+export const contactAPI = { send: (data) => api.post('/contact', data) };
 
 // Equipa da loja (só o administrador principal)
 export const teamAPI = {

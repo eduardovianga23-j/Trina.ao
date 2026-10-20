@@ -13,6 +13,7 @@ import { stripeEnabled } from './utils/stripe.js';
 import { verifyMail } from './utils/mailer.js';
 import { sweepOrders } from './controllers/orderController.js';
 import reviewRoutes from './routes/reviews.js';
+import contactRoutes from './routes/contact.js';
 import { UPLOAD_DIR, storageMode } from './utils/storage.js';
 
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
@@ -39,6 +40,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/contact', contactRoutes);
 
 // Health check
 app.get('/', (req, res) => res.json({ message: 'Trina.ao API running 🚀' }));

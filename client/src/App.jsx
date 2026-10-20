@@ -22,6 +22,8 @@ import AdminTeam from './pages/Admin/AdminTeam';
 import Privacidade from './pages/Legal/Privacidade';
 import Termos from './pages/Legal/Termos';
 import Checkout from './pages/Checkout/Checkout';
+import Envios from './pages/Info/Envios';
+import Contactos from './pages/Info/Contactos';
 import OrderPage from './pages/Order/OrderPage';
 import AdminOrders from './pages/Admin/AdminOrders';
 
@@ -60,6 +62,8 @@ const App = () => {
         <Route path='/conta/:tab' element={<RequireAuth><Account /></RequireAuth>} />
         <Route path='/privacidade' element={<Privacidade />} />
         <Route path='/termos' element={<Termos />} />
+        <Route path='/envios-devolucoes' element={<Envios />} />
+        <Route path='/contactos' element={<Contactos />} />
         {/* Área de administração (só admins) */}
         <Route path='/admin' element={<AdminRoute><AdminProducts /></AdminRoute>} />
         <Route path='/admin/novo' element={<AdminRoute><AdminProductForm /></AdminRoute>} />
