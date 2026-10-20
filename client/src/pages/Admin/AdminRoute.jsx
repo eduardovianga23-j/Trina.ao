@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
   Protege as páginas do painel.
   - Por defeito: entram o administrador principal e os gestores.
   - ownerOnly: só o administrador principal (ex.: página Equipa).
+  - perm: precisa dessa permissão ('products', 'orders' ou 'reviews'). Sem ela, vai para a primeira secção a que tem acesso.
   Sem sessão, vai para o login e volta aqui depois.
 */
 const Blocked = ({ title, text, to = '/', label = 'Voltar à loja' }) => (
@@ -15,8 +16,8 @@ const Blocked = ({ title, text, to = '/', label = 'Voltar à loja' }) => (
   </div>
 );
 
-const AdminRoute = ({ children, ownerOnly = false }) => {
-  const { user, isStaff, isOwner, checking } = useAuth();
+const AdminRoute = ({ children, ownerOnly = false, perm }) => {
+  const { user, isStaff, isOwner, checking, can, adminHome } = useAuth();
   const location = useLocation();
 
   if (checking) {
@@ -27,7 +28,11 @@ const AdminRoute = ({ children, ownerOnly = false }) => {
     return <Blocked title="Acesso reservado à equipa da loja" text="A tua conta não tem permissão para abrir esta página." />;
   }
   if (ownerOnly && !isOwner) {
-    return <Blocked title="Só o administrador principal" text="Esta página só está disponível para o administrador principal da loja." to="/admin" label="Voltar aos produtos" />;
+    return <Blocked title="Só o administrador principal" text="Esta página só está disponível para o administrador principal da loja." to={adminHome || '/'} label="Voltar ao painel" />;
+  }
+  if (perm && !can(perm)) {
+    if (adminHome && adminHome !== location.pathname) return <Navigate to={adminHome} replace />;
+    return <Blocked title="Sem permissão" text="A tua conta de gestor não tem acesso a esta secção. Fala com o administrador principal." />;
   }
   return children;
 };

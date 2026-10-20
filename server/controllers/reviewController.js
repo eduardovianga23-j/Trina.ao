@@ -3,6 +3,7 @@ import Review, { MAX_REVIEW_PHOTOS } from '../models/Review.js';
 import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import { deleteImage } from '../utils/storage.js';
+import { can } from '../utils/permissions.js';
 
 /*
   Avaliações com fotos.
@@ -120,7 +121,7 @@ export const deleteReview = async (req, res) => {
   try {
     if (!isId(req.params.id)) return res.status(404).json({ message: 'Avaliação não encontrada' });
     const review = await Review.findById(req.params.id);
-    const staff = ['admin', 'manager'].includes(req.user.role);
+    const staff = can(req.user, 'reviews');
     if (!review || (!staff && String(review.user) !== String(req.user._id))) {
       return res.status(404).json({ message: 'Avaliação não encontrada' });
     }
@@ -128,6 +129,25 @@ export const deleteReview = async (req, res) => {
     await Promise.all(review.photos.map(deleteImage));
     await refreshRating(review.product);
     res.json({ message: 'Avaliação apagada' });
+  } catch (err) {
+    res.status(500).json({ message: 'Erro no servidor' });
+  }
+};
+
+// GET /api/reviews/admin?page=1&stars=1 — todas as avaliações (equipa com permissão "avaliações")
+export const getAllReviewsAdmin = async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = 20;
+    const stars = parseInt(req.query.stars, 10);
+    const filter = stars >= 1 && stars <= 5 ? { rating: stars } : {};
+    const [reviews, total] = await Promise.all([
+      Review.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit)
+        .populate('product', 'name slug images')
+        .populate('user', 'email'),
+      Review.countDocuments(filter),
+    ]);
+    res.json({ reviews, total, page, pages: Math.max(1, Math.ceil(total / limit)) });
   } catch (err) {
     res.status(500).json({ message: 'Erro no servidor' });
   }

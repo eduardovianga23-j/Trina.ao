@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { protect, staffOnly } from '../middleware/auth.js';
+import { protect, requirePerm } from '../middleware/auth.js';
 import { saveImage, deleteImage } from '../utils/storage.js';
 import Product, { MAX_IMAGES } from '../models/Product.js';
 import Review from '../models/Review.js';
@@ -17,7 +17,7 @@ const upload = multer({
 });
 
 // POST /api/uploads  (campo "images", 1 a 4 fotos) -> { urls: [...] }
-router.post('/', protect, staffOnly, (req, res) => {
+router.post('/', protect, requirePerm('products'), (req, res) => {
   upload.array('images', MAX_IMAGES)(req, res, async (err) => {
     if (err) {
       const message =
@@ -39,7 +39,7 @@ router.post('/', protect, staffOnly, (req, res) => {
 // DELETE /api/uploads  { urls: [...] }
 // Apaga fotos enviadas que acabaram por não ser usadas (ex.: removidas antes de guardar).
 // Nunca apaga uma foto que algum produto esteja a usar.
-router.delete('/', protect, staffOnly, async (req, res) => {
+router.delete('/', protect, requirePerm('products'), async (req, res) => {
   const urls = Array.isArray(req.body?.urls) ? req.body.urls.filter((u) => typeof u === 'string').slice(0, 20) : [];
   let deleted = 0;
   for (const url of urls) {

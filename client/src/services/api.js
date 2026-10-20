@@ -81,6 +81,7 @@ export const reviewAPI = {
   forOrder: (orderId) => api.get(`/reviews/order/${orderId}`),
   save: (data) => api.post('/reviews', data),
   remove: (id) => api.delete(`/reviews/${id}`),
+  adminList: (params) => api.get('/reviews/admin', { params }),
   uploadPhotos: (files) => {
     const form = new FormData();
     files.forEach((f) => form.append('photos', f));
@@ -94,7 +95,8 @@ export const contactAPI = { send: (data) => api.post('/contact', data) };
 // Equipa da loja (só o administrador principal)
 export const teamAPI = {
   list: () => api.get('/users/team'),
-  add: (email) => api.post('/users/team', { email }),
+  add: (email, permissions) => api.post('/users/team', { email, permissions }),
+  setPermissions: (id, permissions) => api.put(`/users/team/${id}/permissions`, { permissions }),
   remove: (id) => api.delete(`/users/team/${id}`),
 };
 

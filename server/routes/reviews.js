@@ -1,6 +1,6 @@
 import express from 'express';
 import multer from 'multer';
-import { protect } from '../middleware/auth.js';
+import { protect, requirePerm } from '../middleware/auth.js';
 import { saveImage } from '../utils/storage.js';
 import { MAX_REVIEW_PHOTOS } from '../models/Review.js';
 import {
@@ -9,6 +9,7 @@ import {
   saveReview,
   deleteReview,
   canUploadReviewPhotos,
+  getAllReviewsAdmin,
 } from '../controllers/reviewController.js';
 
 const router = express.Router();
@@ -22,6 +23,7 @@ const upload = multer({
       : cb(Object.assign(new Error('Formato não suportado. Usa JPG, PNG ou WEBP.'), { status: 400 })),
 });
 
+router.get('/admin', protect, requirePerm('reviews'), getAllReviewsAdmin);
 router.get('/product/:productId', getProductReviews);
 router.get('/order/:orderId', protect, getOrderReviews);
 router.post('/', protect, saveReview);

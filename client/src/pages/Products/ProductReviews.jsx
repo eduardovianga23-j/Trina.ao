@@ -11,7 +11,8 @@ import { fmtDate } from '../../utils/orders';
   Só quem comprou e confirmou que recebeu pode avaliar, por isso todas são "Compra verificada".
 */
 const ProductReviews = ({ productId, onSummary }) => {
-  const { isStaff } = useAuth();
+  const { can } = useAuth();
+  const isStaff = can('reviews'); // equipa com a permissão "Avaliações"
   const [data, setData] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [page, setPage] = useState(1);
