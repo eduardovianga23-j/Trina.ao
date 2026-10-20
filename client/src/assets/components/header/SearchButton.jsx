@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { FaSearch, FaTimes } from 'react-icons/fa';
 import { productAPI } from '../../../services/api';
@@ -54,14 +55,15 @@ const SearchButton = () => {
         <FaSearch className="text-[0.85em]" />
       </button>
 
-      {open && (
-        <div className="fixed inset-0 z-[80]" role="dialog" aria-modal="true" aria-label="Pesquisar produtos">
+      {/* Fica por cima de tudo (fora do cabeçalho, para não ficar escondida atrás da barra preta do topo) */}
+      {open && createPortal(
+        <div className="fixed inset-0 z-[100]" role="dialog" aria-modal="true" aria-label="Pesquisar produtos">
           <div className="absolute inset-0 bg-black/40" onClick={close} />
           <div className="relative bg-white shadow-xl search-drop">
             <form onSubmit={submit} role="search" className="container-site max-w-3xl flex items-center gap-3 py-4">
               <FaSearch className="text-zinc-400 shrink-0" aria-hidden="true" />
               <input ref={inputRef} type="search" value={q} onChange={(e) => setQ(e.target.value)} maxLength={60}
-                placeholder="O que procuras? Ex.: vestido, óculos, preto..." aria-label="Pesquisar"
+                placeholder="O que procuras?" aria-label="Pesquisar"
                 className="flex-1 min-w-0 text-base sm:text-lg outline-none py-2 bg-transparent" />
               <button type="button" onClick={close} aria-label="Fechar pesquisa" className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-zinc-100 text-zinc-500">
                 <FaTimes />
@@ -92,7 +94,8 @@ const SearchButton = () => {
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
