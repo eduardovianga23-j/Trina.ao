@@ -65,6 +65,9 @@ const Login = () => {
             {loading ? 'A entrar...' : 'Iniciar sessão'}
           </button>
           <GoogleButton onCredential={handleGoogle} text="signin_with" disabled={loading} />
+          <p className="text-xs text-zinc-500 text-center">
+            <Link to="/privacidade" className="underline hover:text-black">Privacidade</Link> · <Link to="/termos" className="underline hover:text-black">Termos</Link>
+          </p>
           <p className='text-sm text-center'>
             Não tens uma conta?<Link to="/register" state={location.state} className='font-bold ml-1 hover:underline'>Cadastra-te</Link>
           </p>
