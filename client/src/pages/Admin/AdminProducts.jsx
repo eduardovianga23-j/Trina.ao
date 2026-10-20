@@ -108,6 +108,11 @@ const AdminProducts = () => {
                 )}
                 <span className="text-[10px] text-zinc-500 px-1.5 py-0.5 rounded border border-zinc-200">{p.images.length} fotos</span>
                 {p.hasColors && <span className="text-[10px] text-zinc-500 px-1.5 py-0.5 rounded border border-zinc-200">{p.colors.length} cores</span>}
+                {p.waiting > 0 && (
+                  <span className="text-[10px] font-bold bg-blue-50 text-blue-800 border border-blue-200 px-1.5 py-0.5 rounded" title="Pessoas que pediram para ser avisadas quando houver stock">
+                    🔔 {p.waiting} à espera
+                  </span>
+                )}
                 {p.trackStock && (() => {
                   const out = p.variants.filter((v) => v.stock === 0).length;
                   return p.stock === 0

@@ -67,6 +67,48 @@ const Checkout = () => {
   const [sending, setSending] = useState(false);
   const [serverError, setServerError] = useState('');
 
+  // Código de desconto e preços calculados pelo servidor
+  const [couponInput, setCouponInput] = useState('');
+  const [coupon, setCoupon] = useState(''); // código aplicado
+  const [couponError, setCouponError] = useState('');
+  const [couponBusy, setCouponBusy] = useState(false);
+  const [quote, setQuote] = useState(null);
+  const cartLines = items.map((i) => ({ product: i.productId, quantity: i.quantity, size: i.size, color: i.color }));
+  const cartKey = JSON.stringify(cartLines);
+
+  const loadQuote = async (code) => {
+    const { data } = await orderAPI.quote(cartLines, code || undefined);
+    setQuote(data);
+    return data;
+  };
+  useEffect(() => {
+    if (!count) return;
+    loadQuote(coupon).catch((err) => {
+      // O código deixou de servir (ex.: o carrinho mudou): tira-o e mostra o motivo
+      if (coupon && err.response?.data?.field === 'coupon') {
+        setCoupon('');
+        setCouponError(apiError(err));
+      } else setQuote(null);
+    });
+  }, [cartKey, coupon]);
+
+  const applyCoupon = async (e) => {
+    e?.preventDefault();
+    const code = couponInput.trim().toUpperCase();
+    if (!code) return;
+    setCouponBusy(true);
+    setCouponError('');
+    try {
+      await loadQuote(code);
+      setCoupon(code);
+      setCouponInput('');
+    } catch (err) {
+      setCouponError(apiError(err, 'Não foi possível aplicar o código.'));
+    } finally {
+      setCouponBusy(false);
+    }
+  };
+
   useEffect(() => {
     document.title = 'Finalizar compra — Trina';
     // Preenche com a morada da última encomenda
@@ -106,7 +148,8 @@ const Checkout = () => {
         shippingAddress: address,
         nif: nif.replace(/\s/g, ''),
         notes,
-        items: items.map((i) => ({ product: i.productId, quantity: i.quantity, size: i.size, color: i.color })),
+        items: cartLines,
+        couponCode: coupon || undefined,
       });
       window.location.assign(data.url); // página segura do Stripe
     } catch (err) {
@@ -179,14 +222,40 @@ const Checkout = () => {
                 ))}
               </ul>
 
+              {/* Código de desconto */}
+              <div className="mt-4 border-t border-zinc-200 pt-4">
+                {coupon && quote?.coupon ? (
+                  <div className="flex items-center justify-between gap-2 rounded-md bg-green-50 border border-green-200 px-3 py-2 text-sm">
+                    <span><strong className="font-mono">{quote.coupon.code}</strong> · {quote.coupon.label}</span>
+                    <button type="button" onClick={() => { setCoupon(''); setCouponError(''); }} className="text-xs font-semibold text-red-800 hover:underline">Remover</button>
+                  </div>
+                ) : (
+                  <form onSubmit={applyCoupon} className="flex gap-2">
+                    <label htmlFor="co-coupon" className="sr-only">Código de desconto</label>
+                    <input id="co-coupon" value={couponInput} onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError(''); }}
+                      placeholder="Código de desconto" maxLength={20} autoComplete="off"
+                      className="flex-1 min-w-0 border border-zinc-300 rounded-md px-3 py-2 text-base sm:text-sm uppercase outline-none focus:border-black" />
+                    <button disabled={couponBusy || !couponInput.trim()} className="px-4 text-sm font-semibold border border-zinc-300 rounded-md hover:border-black disabled:opacity-50">
+                      {couponBusy ? '...' : 'Aplicar'}
+                    </button>
+                  </form>
+                )}
+                {couponError && <p role="alert" className="text-xs text-red-700 mt-1.5">{couponError}</p>}
+              </div>
+
               <dl className="mt-4 border-t border-zinc-200 pt-4 space-y-2 text-sm">
-                <div className="flex justify-between"><dt className="text-zinc-600">Subtotal</dt><dd className="tabular-nums">{formatEUR(total)}</dd></div>
+                <div className="flex justify-between"><dt className="text-zinc-600">Subtotal</dt><dd className="tabular-nums">{formatEUR(quote?.subtotal ?? total)}</dd></div>
+                {quote?.discount > 0 && (
+                  <div className="flex justify-between text-green-700"><dt>Desconto ({quote.coupon?.code})</dt><dd className="tabular-nums">−{formatEUR(quote.discount)}</dd></div>
+                )}
                 <div className="flex justify-between">
                   <dt className="text-zinc-600">Envio</dt>
-                  <dd>{envio === null ? '—' : envio === 0 ? <span className="font-semibold text-green-700">Grátis</span> : <span className="tabular-nums">{formatEUR(envio)}</span>}</dd>
+                  {(() => { const e = quote ? quote.shipping : envio; return (
+                    <dd>{e === null ? '—' : e === 0 ? <span className="font-semibold text-green-700">Grátis</span> : <span className="tabular-nums">{formatEUR(e)}</span>}</dd>
+                  ); })()}
                 </div>
                 <div className="flex justify-between border-t border-zinc-200 pt-3 text-base font-bold">
-                  <dt>Total</dt><dd className="text-red-800 tabular-nums">{formatEUR(total + (envio || 0))}</dd>
+                  <dt>Total</dt><dd className="text-red-800 tabular-nums">{formatEUR(quote ? quote.total : total + (envio || 0))}</dd>
                 </div>
                 <p className="text-[11px] text-zinc-500">IVA incluído.</p>
               </dl>

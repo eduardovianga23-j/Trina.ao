@@ -135,7 +135,7 @@ const OrderRow = ({ order, onChange, invoicing, autoInvoicing }) => {
               ))}
             </ul>
             <p className="text-xs text-zinc-500 mt-2">
-              Subtotal {formatEUR(order.subtotal)} · Envio {order.shippingCost ? formatEUR(order.shippingCost) : 'grátis'} · {PAYMENT_STATUS[order.paymentStatus]}
+              Subtotal {formatEUR(order.subtotal)}{order.discount > 0 && ` · Desconto ${order.couponCode} −${formatEUR(order.discount)}`} · Envio {order.shippingCost ? formatEUR(order.shippingCost) : 'grátis'} · {PAYMENT_STATUS[order.paymentStatus]}
             </p>
           </div>
 

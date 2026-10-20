@@ -2,6 +2,8 @@ import mongoose from 'mongoose';
 import Product, { MAX_RELATED } from '../models/Product.js';
 import User from '../models/User.js';
 import Review from '../models/Review.js';
+import StockAlert from '../models/StockAlert.js';
+import { notifyRestock, waitingByProduct } from '../utils/stockAlerts.js';
 import { deleteImage } from '../utils/storage.js';
 
 const isId = (v) => mongoose.isValidObjectId(v);
@@ -10,7 +12,7 @@ const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // Só estes campos podem ser enviados pelo admin (evita alterar rating, vendas, etc.)
 const pickProductFields = (body) => {
   const out = {};
-  for (const k of ['name', 'description', 'category', 'images', 'sizes', 'hasColors', 'colors', 'related', 'trackStock', 'variants', 'featured', 'active']) {
+  for (const k of ['name', 'description', 'category', 'images', 'sizes', 'hasColors', 'colors', 'related', 'trackStock', 'variants', 'sizeGuide', 'fitNote', 'featured', 'active']) {
     if (body[k] !== undefined) out[k] = body[k];
   }
   if (body.price !== undefined) out.price = Number(body.price);
@@ -211,8 +213,9 @@ export const getRelatedProducts = async (req, res) => {
 // GET /api/products/admin/all  (inclui produtos escondidos)
 export const getAllProductsAdmin = async (req, res) => {
   try {
-    const products = await Product.find().select('-reviews').sort({ updatedAt: -1 });
-    res.json(products);
+    const [products, waiting] = await Promise.all([Product.find().select('-reviews').sort({ updatedAt: -1 }), waitingByProduct()]);
+    // waiting = quantas pessoas pediram aviso de stock
+    res.json(products.map((p) => ({ ...p.toObject(), waiting: waiting[String(p._id)] || 0 })));
   } catch (err) {
     sendError(res, err);
   }
@@ -254,6 +257,9 @@ export const updateProduct = async (req, res) => {
     const removed = oldImages.filter((url) => !product.images.includes(url));
     await deleteUnusedImages(removed, product._id);
 
+    // Repôs stock? Avisa quem estava à espera
+    notifyRestock(product._id);
+
     res.json(product);
   } catch (err) {
     sendError(res, err);
@@ -272,6 +278,7 @@ export const deleteProduct = async (req, res) => {
     // Apaga as avaliações do produto e as suas fotos
     const reviews = await Review.find({ product: product._id }).select('photos');
     await Review.deleteMany({ product: product._id });
+    await StockAlert.deleteMany({ product: product._id });
     await Promise.all(reviews.flatMap((r) => r.photos).map(deleteImage));
     await deleteUnusedImages(product.images, product._id);
     res.json({ message: 'Produto eliminado' });

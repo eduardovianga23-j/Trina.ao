@@ -75,6 +75,8 @@ const orderSchema = new mongoose.Schema(
     },
 
     subtotal: { type: Number, required: true },
+    couponCode: String,                   // código de desconto usado
+    discount: { type: Number, default: 0 }, // euros descontados nos produtos
     shippingCost: { type: Number, default: 0 },
     total: { type: Number, required: true },
   },

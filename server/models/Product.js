@@ -74,6 +74,11 @@ const productSchema = new mongoose.Schema(
     // Tamanhos disponíveis (ex.: ["S","M","L"] ou ["36","37"]). Vazio = tamanho único.
     sizes: { type: [{ type: String, trim: true, maxlength: 10 }], default: [] },
 
+    // Guia de tamanhos na página do produto: auto = pela categoria (sapatos → calçado, o resto → roupa)
+    sizeGuide: { type: String, enum: ['auto', 'roupa', 'calcado', 'nenhum'], default: 'auto' },
+    // Nota sobre o tamanho (ex.: "Veste grande: recomendamos um tamanho abaixo")
+    fitNote: { type: String, trim: true, maxlength: 200, default: '' },
+
     // Cores: só existem se hasColors = true
     hasColors: { type: Boolean, default: false },
     colors: { type: [colorSchema], default: [] },

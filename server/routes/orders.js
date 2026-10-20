@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   checkout,
+  quote,
   getShipping,
   cancelPendingOrder,
   confirmReceived,
@@ -16,6 +17,7 @@ import { protect, requirePerm } from '../middleware/auth.js';
 const router = express.Router();
 
 router.get('/shipping', getShipping);
+router.post('/quote', protect, quote);
 router.post('/', protect, checkout);
 router.get('/my-orders', protect, getMyOrders);
 router.get('/', protect, requirePerm('orders'), getAllOrders);
