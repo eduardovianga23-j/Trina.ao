@@ -68,13 +68,14 @@ export const uploadAPI = {
 
 export const orderAPI = {
   shipping: () => api.get('/orders/shipping'),
-  quote: (items, couponCode) => api.post('/orders/quote', { items, couponCode }), // preços calculados no servidor
+  quote: (items, couponCode, email) => api.post('/orders/quote', { items, couponCode, email }), // preços calculados no servidor
   checkout: (data) => api.post('/orders', data), // devolve { orderId, url } da página de pagamento
   getMyOrders: () => api.get('/orders/my-orders'),
-  getById: (id) => api.get(`/orders/${id}`),
-  cancel: (id) => api.post(`/orders/${id}/cancel`),
-  confirmReceived: (id) => api.post(`/orders/${id}/received`),
-  invoice: (id) => api.get(`/orders/${id}/invoice`),       // → { url } do PDF da fatura
+  // t = código secreto das compras sem conta (vem no link do email)
+  getById: (id, t) => api.get(`/orders/${id}`, { params: t ? { t } : {} }),
+  cancel: (id, t) => api.post(`/orders/${id}/cancel`, t ? { t } : {}),
+  confirmReceived: (id, t) => api.post(`/orders/${id}/received`, t ? { t } : {}),
+  invoice: (id, t) => api.get(`/orders/${id}/invoice`, { params: t ? { t } : {} }), // → { url } do PDF da fatura
   retryInvoice: (id) => api.post(`/orders/${id}/invoice`), // admin: emitir de novo
   // Admin
   getAll: (view) => api.get('/orders', { params: { view } }),

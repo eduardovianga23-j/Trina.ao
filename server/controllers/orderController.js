@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import mongoose from 'mongoose';
 import Order from '../models/Order.js';
 import Product from '../models/Product.js';
@@ -6,6 +7,7 @@ import { shippingConfig, shippingFor } from '../utils/shipping.js';
 import { can } from '../utils/permissions.js';
 import Coupon from '../models/Coupon.js';
 import { evaluateCoupon, couponLabel, normCode } from '../utils/coupons.js';
+import { hit } from '../utils/rateLimit.js';
 import { invoicingEnabled, autoInvoicing, issueInvoice, invoicePdfUrl } from '../utils/invoicing.js';
 import { reserveStock, releaseOrderStock, lowStockFor } from '../utils/stock.js';
 import {
@@ -33,6 +35,17 @@ const shortId = (id) => String(id).slice(-6).toUpperCase();
 
 // Estados que contam como "encomenda feita" (os outros são pagamentos abandonados)
 const REAL_ORDER = ['awaiting', 'paid', 'failed'];
+
+// ---------- Quem pode ver uma encomenda ----------
+// Com conta: o dono. Sem conta: quem tem o link com o código secreto (?t=...), que vai nos emails.
+const tokenMatches = (order, t) => {
+  if (!order?.guestToken || typeof t !== 'string' || t.length !== order.guestToken.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(t), Buffer.from(order.guestToken));
+};
+const isCustomer = (req, order) =>
+  Boolean(order) && ((req.user && order.user && String(order.user._id || order.user) === String(req.user._id))
+    || tokenMatches(order, req.query?.t || req.body?.t));
+const canView = (req, order) => isCustomer(req, order) || (req.user && can(req.user, 'orders'));
 
 // NIF português: 9 dígitos com dígito de controlo
 const validNif = (nif) => {
@@ -101,7 +114,7 @@ const readItems = async (rawItems) => {
   return { items, productsById: byId };
 };
 
-const createCheckoutSession = async (order, user) => {
+const createCheckoutSession = async (order, email) => {
   const describe = (it) => [it.size && `Tamanho ${it.size}`, it.color?.name && `Cor ${it.color.name}`].filter(Boolean).join(' · ');
   const stripe = getStripe();
   // Código de desconto: um "cupão" do Stripe só para este pagamento, com o valor já calculado aqui
@@ -121,7 +134,7 @@ const createCheckoutSession = async (order, user) => {
     ...(discounts && { discounts }),
     mode: 'payment',
     locale: 'pt',
-    customer_email: user.email,
+    customer_email: email,
     client_reference_id: String(order._id),
     metadata: { orderId: String(order._id) },
     payment_intent_data: {
@@ -150,8 +163,8 @@ const createCheckoutSession = async (order, user) => {
     }],
     // A página de pagamento fecha ao fim de 31 minutos (as peças reservadas voltam ao stock)
     expires_at: Math.floor(Date.now() / 1000) + 31 * 60,
-    success_url: `${clientUrl()}/encomenda/${order._id}?pago=1`,
-    cancel_url: `${clientUrl()}/cart?cancelado=${order._id}`,
+    success_url: `${clientUrl()}/encomenda/${order._id}?pago=1${order.guestToken ? `&t=${order.guestToken}` : ''}`,
+    cancel_url: `${clientUrl()}/cart?cancelado=${order._id}${order.guestToken ? `&t=${order.guestToken}` : ''}`,
   });
 };
 
@@ -291,6 +304,7 @@ const publicOrder = (order) => {
   const o = order.toObject ? order.toObject() : { ...order };
   delete o.stripeSessionId;
   delete o.stripePaymentIntentId;
+  delete o.guestToken;
   return o;
 };
 
@@ -300,13 +314,13 @@ const publicOrder = (order) => {
 export const getShipping = (req, res) => res.json({ ...shippingConfig(), payments: stripeEnabled() });
 
 // Subtotal, desconto, portes e total (em cêntimos) — sempre calculados aqui, nunca no navegador
-const priceOrder = async (items, couponCode, userId) => {
+const priceOrder = async (items, couponCode, userId, email) => {
   const subtotalC = items.reduce((acc, i) => acc + cents(i.price) * i.quantity, 0);
   let coupon = null;
   let discountC = 0;
   let freeShipping = false;
   if (couponCode) {
-    const r = await evaluateCoupon(couponCode, { userId, subtotalC });
+    const r = await evaluateCoupon(couponCode, { userId, email, subtotalC });
     if (r.error) return { error: r.error };
     ({ coupon, discountC, freeShipping } = r);
   }
@@ -320,7 +334,7 @@ export const quote = async (req, res) => {
     const { items, error } = await readItems(req.body?.items);
     if (error) return res.status(400).json({ message: error });
     const code = normCode(req.body?.couponCode);
-    const p = await priceOrder(items, code, req.user._id);
+    const p = await priceOrder(items, code, req.user?._id, req.user?.email || String(req.body?.email || '').trim().toLowerCase());
     if (p.error) return res.status(400).json({ message: p.error, field: 'coupon' });
     res.json({
       subtotal: p.subtotalC / 100,
@@ -341,13 +355,20 @@ export const checkout = async (req, res) => {
     return res.status(503).json({ message: 'Os pagamentos ainda não estão ativos na loja. Tenta mais tarde.' });
   }
   try {
+    // Compra sem conta: precisa do email (para a confirmação, a fatura e o link da encomenda)
+    let guestEmail = null;
+    if (!req.user) {
+      guestEmail = String(req.body?.email || '').trim().toLowerCase().slice(0, 120);
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(guestEmail)) return res.status(400).json({ message: 'Indica o teu email para receberes a confirmação', field: 'email' });
+      if (hit('guest-checkout', req.ip, 60 * 60 * 1000).count > 20) return res.status(429).json({ message: 'Demasiadas tentativas seguidas. Tenta mais tarde.' });
+    }
     const addr = readAddress(req.body);
     if (addr.error) return res.status(400).json({ message: addr.error });
     const { items, productsById, error } = await readItems(req.body?.items);
     if (error) return res.status(400).json({ message: error });
 
     const couponCode = normCode(req.body?.couponCode);
-    const price = await priceOrder(items, couponCode, req.user._id);
+    const price = await priceOrder(items, couponCode, req.user?._id, req.user?.email || guestEmail);
     if (price.error) return res.status(400).json({ message: price.error, field: 'coupon' });
     const { subtotalC, discountC, shippingC, totalC } = price;
     if (totalC < 50) return res.status(400).json({ message: 'O valor mínimo de uma encomenda é 0,50 €' });
@@ -357,7 +378,7 @@ export const checkout = async (req, res) => {
     if (stock.error) return res.status(409).json({ message: stock.error });
 
     const order = await Order.create({
-      user: req.user._id,
+      ...(req.user ? { user: req.user._id } : { guestEmail, guestToken: crypto.randomBytes(24).toString('hex') }),
       items,
       stockReserved: stock.reservedAny,
       shippingAddress: addr.address,
@@ -370,10 +391,10 @@ export const checkout = async (req, res) => {
     });
 
     try {
-      const session = await createCheckoutSession(order, req.user);
+      const session = await createCheckoutSession(order, req.user?.email || guestEmail);
       order.stripeSessionId = session.id;
       await order.save();
-      res.status(201).json({ orderId: order._id, url: session.url });
+      res.status(201).json({ orderId: order._id, url: session.url, ...(order.guestToken && { token: order.guestToken }) });
     } catch (err) {
       await releaseOrderStock(order._id);
       await Order.deleteOne({ _id: order._id });
@@ -390,8 +411,8 @@ export const checkout = async (req, res) => {
 export const cancelPendingOrder = async (req, res) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Encomenda não encontrada' });
-    let order = await Order.findOne({ _id: req.params.id, user: req.user._id });
-    if (!order) return res.status(404).json({ message: 'Encomenda não encontrada' });
+    let order = await Order.findById(req.params.id);
+    if (!isCustomer(req, order)) return res.status(404).json({ message: 'Encomenda não encontrada' });
     if (order.paymentStatus === 'pending' && order.stripeSessionId) {
       // Fecha a página de pagamento para não poder ser paga mais tarde
       await getStripe()?.checkout.sessions.expire(order.stripeSessionId).catch(() => {});
@@ -421,8 +442,7 @@ export const getOrderById = async (req, res) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Encomenda não encontrada' });
     let order = await Order.findById(req.params.id);
-    const isOwner = order && String(order.user) === String(req.user._id);
-    if (!order || (!isOwner && !can(req.user, 'orders'))) return res.status(404).json({ message: 'Encomenda não encontrada' });
+    if (!canView(req, order)) return res.status(404).json({ message: 'Encomenda não encontrada' });
     order = await trySync(order);
     await order.populate('user', 'name email');
     res.json(publicOrder(order));
@@ -435,8 +455,8 @@ export const getOrderById = async (req, res) => {
 export const confirmReceived = async (req, res) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Encomenda não encontrada' });
-    const order = await Order.findOne({ _id: req.params.id, user: req.user._id });
-    if (!order) return res.status(404).json({ message: 'Encomenda não encontrada' });
+    const order = await Order.findById(req.params.id);
+    if (!isCustomer(req, order)) return res.status(404).json({ message: 'Encomenda não encontrada' });
     if (order.receivedAt) return res.json(publicOrder(order));
     if (order.paymentStatus !== 'paid' || !['shipped', 'delivered'].includes(order.orderStatus)) {
       return res.status(400).json({ message: 'Só podes confirmar depois de a encomenda ser enviada' });
@@ -457,9 +477,8 @@ export const confirmReceived = async (req, res) => {
 export const getInvoicePdf = async (req, res) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Encomenda não encontrada' });
-    const order = await Order.findById(req.params.id).select('user invoice');
-    const isOwner = order && String(order.user) === String(req.user._id);
-    if (!order || (!isOwner && !can(req.user, 'orders'))) return res.status(404).json({ message: 'Encomenda não encontrada' });
+    const order = await Order.findById(req.params.id).select('user invoice guestToken');
+    if (!canView(req, order)) return res.status(404).json({ message: 'Encomenda não encontrada' });
     if (order.invoice?.status !== 'issued' || !order.invoice.id) return res.status(404).json({ message: 'A fatura ainda não está disponível' });
     if (!invoicingEnabled()) return res.status(503).json({ message: 'A faturação não está ligada' });
     res.json({ url: await invoicePdfUrl(order.invoice.id), number: order.invoice.number });
@@ -499,7 +518,7 @@ export const getAllOrders = async (req, res) => {
     const view = ADMIN_VIEWS[req.query.view] ? req.query.view : 'enviar';
     const [orders, ...counts] = await Promise.all([
       Order.find(ADMIN_VIEWS[view])
-        .select('-stripeSessionId -stripePaymentIntentId')
+        .select('-stripeSessionId -stripePaymentIntentId -guestToken')
         .populate('user', 'name email')
         .sort({ createdAt: -1 })
         .limit(200),

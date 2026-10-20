@@ -45,3 +45,17 @@ export const requirePerm = (perm) => (req, res, next) => {
   }
   next();
 };
+
+// Sessão opcional: se houver token válido, req.user fica preenchido; senão continua sem utilizador (compra sem conta)
+export const optionalAuth = async (req, res, next) => {
+  req.user = null;
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (token) {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const user = await User.findById(decoded.id).select('-password -googleId -passwordResetHash -passwordResetExpires');
+      if (user && (decoded.sv || 0) === (user.sessionVersion || 0)) req.user = user;
+    }
+  } catch { /* token inválido: segue como visitante */ }
+  next();
+};

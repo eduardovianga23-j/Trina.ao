@@ -12,20 +12,20 @@ import {
   getInvoicePdf,
   retryInvoice,
 } from '../controllers/orderController.js';
-import { protect, requirePerm } from '../middleware/auth.js';
+import { protect, optionalAuth, requirePerm } from '../middleware/auth.js';
 
 const router = express.Router();
 
 router.get('/shipping', getShipping);
-router.post('/quote', protect, quote);
-router.post('/', protect, checkout);
+router.post('/quote', optionalAuth, quote);
+router.post('/', optionalAuth, checkout); // com ou sem conta
 router.get('/my-orders', protect, getMyOrders);
 router.get('/', protect, requirePerm('orders'), getAllOrders);
-router.get('/:id', protect, getOrderById);
-router.post('/:id/cancel', protect, cancelPendingOrder);
-router.post('/:id/received', protect, confirmReceived);
+router.get('/:id', optionalAuth, getOrderById);
+router.post('/:id/cancel', optionalAuth, cancelPendingOrder);
+router.post('/:id/received', optionalAuth, confirmReceived);
 router.put('/:id/status', protect, requirePerm('orders'), updateOrderStatus);
-router.get('/:id/invoice', protect, getInvoicePdf);
+router.get('/:id/invoice', optionalAuth, getInvoicePdf);
 router.post('/:id/invoice', protect, requirePerm('orders'), retryInvoice);
 
 export default router;

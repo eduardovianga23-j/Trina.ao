@@ -40,7 +40,7 @@ const Termos = () => (
 
     <H2 id="conta">2. Conta de cliente</H2>
     <p>
-      Podes criar conta com email e senha, ou com a tua conta Google. És responsável por manter a tua senha em segredo e
+      Podes comprar sem conta (usamos o teu email para a confirmação, a fatura e o link da encomenda) ou criar conta com email e senha, ou com a tua conta Google. És responsável por manter a tua senha em segredo e
       por nos dares dados verdadeiros. Podemos suspender contas usadas de forma fraudulenta ou abusiva.
     </p>
     <p>
