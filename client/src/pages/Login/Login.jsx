@@ -4,15 +4,30 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { apiError } from '../../services/api';
 import AuthField from '../../assets/components/ui/AuthField';
+import GoogleButton from '../../assets/components/ui/GoogleButton';
 import Logo from '../../assets/components/ui/Logo';
 
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { login, loginWithGoogle } = useAuth();
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Entrar ou criar conta com o Google
+  const handleGoogle = async (credential) => {
+    setError('');
+    setLoading(true);
+    try {
+      const user = await loginWithGoogle(credential);
+      navigate(location.state?.from || (['admin', 'manager'].includes(user.role) ? '/admin' : '/'), { replace: true });
+    } catch (err) {
+      setError(apiError(err, 'Não foi possível entrar com o Google.'));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -49,6 +64,7 @@ const Login = () => {
             className='w-full h-[50px] bg-red-800 hover:bg-red-900 disabled:opacity-60 text-white text-sm rounded-md'>
             {loading ? 'A entrar...' : 'Iniciar sessão'}
           </button>
+          <GoogleButton onCredential={handleGoogle} text="signin_with" disabled={loading} />
           <p className='text-sm text-center'>
             Não tens uma conta?<Link to="/register" state={location.state} className='font-bold ml-1 hover:underline'>Cadastra-te</Link>
           </p>

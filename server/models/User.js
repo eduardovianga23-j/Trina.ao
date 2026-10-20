@@ -4,8 +4,15 @@ import bcrypt from 'bcryptjs';
 const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
-    email: { type: String, required: true, unique: true, lowercase: true },
-    password: { type: String, required: true, minlength: 6 },
+    email: { type: String, required: true, unique: true, lowercase: true, trim: true },
+    // Contas criadas só com o Google não têm password
+    password: {
+      type: String,
+      minlength: 6,
+      required() { return !this.googleId; },
+    },
+    // Identificador da conta Google (quando a pessoa entra com o Google)
+    googleId: { type: String, unique: true, sparse: true },
     // customer = cliente · manager = gestor (só gere produtos) · admin = administrador principal (gere tudo, incluindo a equipa)
     role: { type: String, enum: ['customer', 'manager', 'admin'], default: 'customer' },
     avatar: { type: String, default: '' },
@@ -28,6 +35,7 @@ userSchema.pre('save', async function (next) {
 
 // Compare passwords
 userSchema.methods.comparePassword = async function (candidatePassword) {
+  if (!this.password) return false; // conta só com Google
   return bcrypt.compare(candidatePassword, this.password);
 };
 

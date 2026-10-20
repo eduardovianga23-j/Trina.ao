@@ -61,6 +61,16 @@ Entra com a conta de administrador e abre **/admin** (ou usa o menu da conta →
 - "Combina com": até 4 produtos sugeridos em "Você também pode comprar"
   (se não escolheres, o site sugere produtos da mesma categoria)
 
+## Entrar com o Google (opcional)
+
+1. Abre a [Google Cloud Console → Credenciais](https://console.cloud.google.com/apis/credentials) e cria um projeto.
+2. Configura o **ecrã de consentimento OAuth** (tipo *Externo*, nome "Trina", o teu email).
+3. **Criar credenciais → ID do cliente OAuth → Aplicação Web.**
+4. Em **Origens JavaScript autorizadas** adiciona `http://localhost:5173` (e, mais tarde, o endereço do site online, ex.: `https://trina.pt`).
+5. Copia o **ID do cliente** (termina em `.apps.googleusercontent.com`) para `GOOGLE_CLIENT_ID` no `server/.env` e reinicia o servidor.
+
+Sem `GOOGLE_CLIENT_ID`, o botão simplesmente não aparece.
+
 ## Fotos dos produtos
 
 - **No teu PC:** ficam em `server/uploads/` (esta pasta não vai para o GitHub).
