@@ -1,5 +1,6 @@
 import Product from '../models/Product.js';
 import Order from '../models/Order.js';
+import { notifyRestock } from './stockAlerts.js';
 
 /*
   Stock por tamanho e cor.
@@ -70,6 +71,8 @@ export const releaseOrderStock = async (orderId) => {
   const order = await Order.findOneAndUpdate({ _id: orderId, stockReserved: true }, { stockReserved: false });
   if (!order) return false;
   await Promise.all(order.items.filter((i) => i.reserved).map(releaseItem));
+  // Alguém pode estar à espera destas peças
+  [...new Set(order.items.filter((i) => i.reserved).map((i) => String(i.product)))].forEach((id) => notifyRestock(id));
   return true;
 };
 

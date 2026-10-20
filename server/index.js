@@ -19,6 +19,8 @@ import { invoicingEnabled, autoInvoicing } from './utils/invoicing.js';
 import { sweepOrders } from './controllers/orderController.js';
 import reviewRoutes from './routes/reviews.js';
 import contactRoutes from './routes/contact.js';
+import couponRoutes from './routes/coupons.js';
+import stockAlertRoutes from './routes/stockAlerts.js';
 import { UPLOAD_DIR, storageMode } from './utils/storage.js';
 
 if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
@@ -77,6 +79,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/uploads', uploadRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/coupons', couponRoutes);
+app.use('/api/stock-alerts', stockAlertRoutes);
 
 // Saúde do servidor (o alojamento usa isto para saber se está tudo bem)
 app.get('/api/health', (req, res) => {

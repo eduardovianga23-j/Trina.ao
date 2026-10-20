@@ -287,6 +287,9 @@ const OrderPage = () => {
 
                 <dl className="mt-2 border-t border-zinc-200 pt-3 space-y-1.5 text-sm">
                   <div className="flex justify-between"><dt className="text-zinc-600">Subtotal</dt><dd className="tabular-nums">{formatEUR(order.subtotal)}</dd></div>
+                  {order.discount > 0 && (
+                    <div className="flex justify-between text-green-700"><dt>Desconto ({order.couponCode})</dt><dd className="tabular-nums">−{formatEUR(order.discount)}</dd></div>
+                  )}
                   <div className="flex justify-between"><dt className="text-zinc-600">Envio</dt><dd className="tabular-nums">{order.shippingCost ? formatEUR(order.shippingCost) : 'Grátis'}</dd></div>
                   <div className="flex justify-between font-bold text-base pt-1"><dt>Total</dt><dd className="tabular-nums">{formatEUR(order.total)}</dd></div>
                 </dl>

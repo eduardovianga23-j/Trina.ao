@@ -64,11 +64,22 @@ const net = (gross) => Math.round((Number(gross) / (1 + vatRate() / 100)) * 1000
 export const buildInvoice = (order) => {
   const a = order.shippingAddress || {};
   const ref = String(order._id).slice(-6).toUpperCase();
-  const items = order.items.map((it) => ({
+  // Código de desconto: reparte o desconto pelas linhas (em cêntimos), para o total da fatura ser o valor pago
+  const lineC = order.items.map((it) => Math.round(it.price * 100) * it.quantity);
+  const subtotalC = lineC.reduce((a, n) => a + n, 0);
+  const discountC = Math.round((order.discount || 0) * 100);
+  let left = discountC;
+  const afterC = lineC.map((c, i) => {
+    const share = i === lineC.length - 1 ? left : Math.round((discountC * c) / (subtotalC || 1));
+    left -= share;
+    return c - share;
+  });
+  const items = order.items.map((it, i) => ({
     // O InvoiceXpress guarda os artigos pelo nome: inclui tamanho e cor para não misturar
     name: [it.name, it.size, it.color?.name].filter(Boolean).join(' · ').slice(0, 60),
-    description: [it.name, it.size && `Tamanho ${it.size}`, it.color?.name && `Cor ${it.color.name}`].filter(Boolean).join(' · ').slice(0, 200),
-    unit_price: net(it.price),
+    description: [it.name, it.size && `Tamanho ${it.size}`, it.color?.name && `Cor ${it.color.name}`,
+      discountC > 0 && `Desconto ${order.couponCode}`].filter(Boolean).join(' · ').slice(0, 200),
+    unit_price: net(afterC[i] / 100 / it.quantity),
     quantity: it.quantity,
     tax: { name: taxName() },
   }));

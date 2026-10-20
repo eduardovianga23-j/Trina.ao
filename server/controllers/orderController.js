@@ -4,6 +4,8 @@ import Product from '../models/Product.js';
 import { getStripe, stripeEnabled, stripeMessage } from '../utils/stripe.js';
 import { shippingConfig, shippingFor } from '../utils/shipping.js';
 import { can } from '../utils/permissions.js';
+import Coupon from '../models/Coupon.js';
+import { evaluateCoupon, couponLabel, normCode } from '../utils/coupons.js';
 import { invoicingEnabled, autoInvoicing, issueInvoice, invoicePdfUrl } from '../utils/invoicing.js';
 import { reserveStock, releaseOrderStock, lowStockFor } from '../utils/stock.js';
 import {
@@ -99,9 +101,24 @@ const readItems = async (rawItems) => {
   return { items, productsById: byId };
 };
 
-const createCheckoutSession = (order, user) => {
+const createCheckoutSession = async (order, user) => {
   const describe = (it) => [it.size && `Tamanho ${it.size}`, it.color?.name && `Cor ${it.color.name}`].filter(Boolean).join(' · ');
-  return getStripe().checkout.sessions.create({
+  const stripe = getStripe();
+  // Código de desconto: um "cupão" do Stripe só para este pagamento, com o valor já calculado aqui
+  let discounts;
+  if (order.discount > 0) {
+    const coupon = await stripe.coupons.create({
+      amount_off: cents(order.discount),
+      currency: 'eur',
+      duration: 'once',
+      max_redemptions: 1,
+      name: `Código ${order.couponCode}`.slice(0, 40),
+      metadata: { orderId: String(order._id) },
+    });
+    discounts = [{ coupon: coupon.id }];
+  }
+  return stripe.checkout.sessions.create({
+    ...(discounts && { discounts }),
     mode: 'payment',
     locale: 'pt',
     customer_email: user.email,
@@ -157,6 +174,7 @@ const markPaid = async (order, method, piId) => {
     await Product.bulkWrite(updated.items.map((i) => ({
       updateOne: { filter: { _id: i.product }, update: { $inc: { sold: i.quantity } } },
     })));
+    if (updated.couponCode) await Coupon.updateOne({ code: updated.couponCode }, { $inc: { usedCount: 1 } });
     await updated.populate('user', 'name email');
     emailOrderPaid(updated);
     lowStockFor(updated.items).then((low) => emailAdminNewOrder(updated, low)).catch(() => emailAdminNewOrder(updated));
@@ -281,6 +299,42 @@ const publicOrder = (order) => {
 // GET /api/orders/shipping — portes e se os pagamentos estão ativos
 export const getShipping = (req, res) => res.json({ ...shippingConfig(), payments: stripeEnabled() });
 
+// Subtotal, desconto, portes e total (em cêntimos) — sempre calculados aqui, nunca no navegador
+const priceOrder = async (items, couponCode, userId) => {
+  const subtotalC = items.reduce((acc, i) => acc + cents(i.price) * i.quantity, 0);
+  let coupon = null;
+  let discountC = 0;
+  let freeShipping = false;
+  if (couponCode) {
+    const r = await evaluateCoupon(couponCode, { userId, subtotalC });
+    if (r.error) return { error: r.error };
+    ({ coupon, discountC, freeShipping } = r);
+  }
+  const shippingC = freeShipping ? 0 : cents(shippingFor((subtotalC - discountC) / 100));
+  return { subtotalC, discountC, shippingC, totalC: subtotalC - discountC + shippingC, coupon };
+};
+
+// POST /api/orders/quote  { items, couponCode } — resumo de preços para a página de checkout
+export const quote = async (req, res) => {
+  try {
+    const { items, error } = await readItems(req.body?.items);
+    if (error) return res.status(400).json({ message: error });
+    const code = normCode(req.body?.couponCode);
+    const p = await priceOrder(items, code, req.user._id);
+    if (p.error) return res.status(400).json({ message: p.error, field: 'coupon' });
+    res.json({
+      subtotal: p.subtotalC / 100,
+      discount: p.discountC / 100,
+      shipping: p.shippingC / 100,
+      total: p.totalC / 100,
+      coupon: p.coupon ? { code: p.coupon.code, label: couponLabel(p.coupon) } : null,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Erro no servidor' });
+  }
+};
+
 // POST /api/orders — cria a encomenda e devolve o endereço da página de pagamento
 export const checkout = async (req, res) => {
   if (!stripeEnabled()) {
@@ -292,9 +346,11 @@ export const checkout = async (req, res) => {
     const { items, productsById, error } = await readItems(req.body?.items);
     if (error) return res.status(400).json({ message: error });
 
-    const subtotalC = items.reduce((acc, i) => acc + cents(i.price) * i.quantity, 0);
-    const shippingC = cents(shippingFor(subtotalC / 100));
-    if (subtotalC + shippingC < 50) return res.status(400).json({ message: 'O valor mínimo de uma encomenda é 0,50 €' });
+    const couponCode = normCode(req.body?.couponCode);
+    const price = await priceOrder(items, couponCode, req.user._id);
+    if (price.error) return res.status(400).json({ message: price.error, field: 'coupon' });
+    const { subtotalC, discountC, shippingC, totalC } = price;
+    if (totalC < 50) return res.status(400).json({ message: 'O valor mínimo de uma encomenda é 0,50 €' });
 
     // Reserva as peças (o stock desce já; volta se o pagamento não for feito)
     const stock = await reserveStock(items, productsById);
@@ -309,7 +365,8 @@ export const checkout = async (req, res) => {
       notes: addr.notes,
       subtotal: subtotalC / 100,
       shippingCost: shippingC / 100,
-      total: (subtotalC + shippingC) / 100,
+      ...(price.coupon && { couponCode: price.coupon.code, discount: discountC / 100 }),
+      total: totalC / 100,
     });
 
     try {

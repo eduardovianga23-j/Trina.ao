@@ -30,6 +30,7 @@ import Contactos from './pages/Info/Contactos';
 import OrderPage from './pages/Order/OrderPage';
 import AdminOrders from './pages/Admin/AdminOrders';
 import AdminReviews from './pages/Admin/AdminReviews';
+import AdminCoupons from './pages/Admin/AdminCoupons';
 
 const NotFound = () => (
   <div className="min-h-screen flex flex-col items-center justify-center text-center px-4">
@@ -75,6 +76,7 @@ const App = () => {
         <Route path='/admin' element={<AdminRoute perm="products"><AdminProducts /></AdminRoute>} />
         <Route path='/admin/novo' element={<AdminRoute perm="products"><AdminProductForm /></AdminRoute>} />
         <Route path='/admin/editar/:id' element={<AdminRoute perm="products"><AdminProductForm /></AdminRoute>} />
+        <Route path='/admin/descontos' element={<AdminRoute perm="products"><AdminCoupons /></AdminRoute>} />
         <Route path='/admin/encomendas' element={<AdminRoute perm="orders"><AdminOrders /></AdminRoute>} />
         <Route path='/admin/avaliacoes' element={<AdminRoute perm="reviews"><AdminReviews /></AdminRoute>} />
         <Route path='/admin/equipa' element={<AdminRoute ownerOnly><AdminTeam /></AdminRoute>} />

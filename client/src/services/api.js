@@ -68,6 +68,7 @@ export const uploadAPI = {
 
 export const orderAPI = {
   shipping: () => api.get('/orders/shipping'),
+  quote: (items, couponCode) => api.post('/orders/quote', { items, couponCode }), // preços calculados no servidor
   checkout: (data) => api.post('/orders', data), // devolve { orderId, url } da página de pagamento
   getMyOrders: () => api.get('/orders/my-orders'),
   getById: (id) => api.get(`/orders/${id}`),
@@ -93,6 +94,17 @@ export const reviewAPI = {
     return api.post('/reviews/photos', form);
   },
 };
+
+// Códigos de desconto (painel)
+export const couponAPI = {
+  list: () => api.get('/coupons'),
+  create: (data) => api.post('/coupons', data),
+  update: (id, data) => api.put(`/coupons/${id}`, data),
+  remove: (id) => api.delete(`/coupons/${id}`),
+};
+
+// "Avisa-me quando voltar"
+export const stockAlertAPI = { create: (data) => api.post('/stock-alerts', data) };
 
 // Formulário de contacto
 export const contactAPI = { send: (data) => api.post('/contact', data) };

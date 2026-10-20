@@ -12,12 +12,21 @@ import { useCart } from "../../context/CartContext";
 import { productAPI, apiError } from "../../services/api";
 import { formatEUR, discountPercent, categoryLabel } from "../../utils/format";
 import ProductReviews, { ReviewsBadge } from "./ProductReviews";
+import SizeGuide from "../../assets/components/ui/SizeGuide";
+import { guideFor } from "../../config/tamanhos";
+import { stockAlertAPI } from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
 
 // Página de um produto:  /produto/:slug
 const Products = () => {
   const { slug } = useParams();
   const [searchParams] = useSearchParams();
   const { addItem, items: cartItems } = useCart();
+  const { user } = useAuth();
+  const [showGuide, setShowGuide] = useState(false);
+  const [alertEmail, setAlertEmail] = useState("");
+  const [alertState, setAlertState] = useState(null); // ['ok' | 'err', mensagem]
+  const [alertBusy, setAlertBusy] = useState(false);
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -79,10 +88,7 @@ const Products = () => {
   const maxQty = Math.max(0, Math.min(99, available));
   const variantSoldOut = (!hasSizes || size) && stockFor(chosenSize) === 0;
 
-  // Mudar de cor pode deixar o tamanho escolhido sem stock: limpa a escolha e acerta a quantidade
-  useEffect(() => {
-    if (size && tracked && stockFor(size) === 0) setSize("");
-  }, [colorName]);
+  // Quantidade nunca acima do que há em stock
   useEffect(() => {
     if (maxQty > 0 && quantity > maxQty) setQuantity(maxQty);
   }, [maxQty]);
@@ -99,6 +105,23 @@ const Products = () => {
     const c = product?.hasColors && product.colors.find((col) => col.image === images[index]);
     if (c) setColor(c);
   };
+
+  // "Avisa-me quando voltar" (tamanho/cor esgotado)
+  useEffect(() => { setAlertState(null); }, [size, colorName]);
+  useEffect(() => { if (user?.email) setAlertEmail((e) => e || user.email); }, [user]);
+  const requestAlert = async (e) => {
+    e.preventDefault();
+    setAlertBusy(true);
+    try {
+      const { data } = await stockAlertAPI.create({ productId: product._id, size: chosenSize, color: colorName, email: alertEmail.trim() });
+      setAlertState(["ok", data.message]);
+    } catch (err) {
+      setAlertState(["err", apiError(err)]);
+    } finally {
+      setAlertBusy(false);
+    }
+  };
+  const guide = guideFor(product);
 
   const handleAddToCart = () => {
     if (hasSizes && !size) { setSizeError(true); return; }
@@ -168,7 +191,15 @@ const Products = () => {
                 <>
                   <div className="mt-5"><span className="text-xs font-semibold"><FontAwesomeIcon className="mr-1" icon={faAngleRight}/>Recomendamos o teu tamanho habitual</span></div>
                   <fieldset className="mt-3">
-                    <legend className="font-semibold text-sm">Tamanho</legend>
+                    <div className="flex items-center justify-between gap-3">
+                      <legend className="font-semibold text-sm">Tamanho</legend>
+                      {guide && (
+                        <button type="button" onClick={() => setShowGuide(true)} className="text-xs font-semibold underline underline-offset-2 hover:text-red-800">
+                          📏 Guia de tamanhos
+                        </button>
+                      )}
+                    </div>
+                    {product.fitNote && <p className="text-xs text-zinc-700 bg-amber-50 border border-amber-200 rounded px-2.5 py-1.5 mt-2">💡 {product.fitNote}</p>}
                     <div className="mt-2 flex flex-wrap gap-2" role="radiogroup" aria-invalid={sizeError}>
                       {product.sizes.map((s) => {
                         const out = stockFor(s) === 0;
@@ -177,12 +208,11 @@ const Products = () => {
                             key={s}
                             role="radio"
                             aria-checked={size === s}
-                            disabled={out}
                             aria-label={out ? `${s} (esgotado)` : s}
-                            title={out ? "Esgotado" : undefined}
+                            title={out ? "Esgotado — escolhe para pedires um aviso" : undefined}
                             onClick={() => { setSize(s); setSizeError(false); }}
                             className={`relative min-w-[44px] h-10 px-3 border text-sm rounded-sm transition-colors ${
-                              out ? "border-zinc-200 text-zinc-300 line-through cursor-not-allowed bg-zinc-50"
+                              out ? (size === s ? "border-zinc-500 text-zinc-500 line-through bg-zinc-100" : "border-zinc-200 text-zinc-300 line-through bg-zinc-50 hover:border-zinc-400")
                               : size === s ? "bg-black text-white border-black" : sizeError ? "border-red-700" : "border-zinc-300 hover:border-black"
                             }`}
                           >
@@ -262,12 +292,37 @@ const Products = () => {
                   <Link to="/cart" className="text-center text-sm font-semibold underline underline-offset-4 hover:text-red-800">Ver carrinho</Link>
                 )}
               </div>
+
+              {/* Esgotado: pedir aviso por email */}
+              {tracked && (variantSoldOut || (soldOut && !hasSizes)) && (
+                <div className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+                  <p className="text-sm font-semibold">🔔 Avisa-me quando voltar</p>
+                  <p className="text-xs text-zinc-600 mt-0.5">
+                    {[hasSizes && size && `Tamanho ${size}`, product.hasColors && colorName].filter(Boolean).join(" · ") || "Este produto"} está esgotado. Enviamos-te um email assim que houver.
+                  </p>
+                  {alertState?.[0] === "ok" ? (
+                    <p role="status" className="text-sm text-green-700 mt-2">✓ {alertState[1]}</p>
+                  ) : (
+                    <form onSubmit={requestAlert} className="mt-2 flex gap-2">
+                      <label htmlFor="alert-email" className="sr-only">O teu email</label>
+                      <input id="alert-email" type="email" required placeholder="O teu email" value={alertEmail}
+                        onChange={(e) => setAlertEmail(e.target.value)}
+                        className="flex-1 min-w-0 border border-zinc-300 rounded-sm px-3 py-2 text-base sm:text-sm bg-white outline-none focus:border-black" />
+                      <button disabled={alertBusy} className="px-4 bg-black text-white text-sm font-semibold rounded-sm hover:bg-zinc-800 disabled:opacity-60">
+                        {alertBusy ? "..." : "Avisar-me"}
+                      </button>
+                    </form>
+                  )}
+                  {alertState?.[0] === "err" && <p role="alert" className="text-xs text-red-700 mt-1.5">{alertState[1]}</p>}
+                </div>
+              )}
             </div>
           </div>
         )}
       </div>
 
       {product && <ProductReviews productId={product._id} />}
+      {showGuide && guide && <SizeGuide guide={guide} highlight={size} onClose={() => setShowGuide(false)} />}
 
       {!error && (relatedLoading || related.length > 0) && (
         <section className="w-full mt-12 sm:mt-20 mb-16 sm:mb-20">

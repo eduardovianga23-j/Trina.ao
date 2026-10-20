@@ -46,6 +46,7 @@ const itemsTable = (order) => {
     </tr>`;
   }).join('');
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:16px 0;font-size:13px">${rows}
+    ${order.discount > 0 ? `<tr><td></td><td style="padding:8px;color:#15803d">Desconto ${esc(order.couponCode)}</td><td style="padding:8px 0;text-align:right;color:#15803d">−${eur(order.discount)}</td></tr>` : ''}
     <tr><td></td><td style="padding:8px;color:#71717a">Envio</td><td style="padding:8px 0;text-align:right">${order.shippingCost ? eur(order.shippingCost) : 'Grátis'}</td></tr>
     <tr><td></td><td style="padding:4px 8px;font-weight:bold;font-size:15px">Total</td><td style="padding:4px 0;text-align:right;font-weight:bold;font-size:15px">${eur(order.total)}</td></tr>
   </table>`;
@@ -192,3 +193,22 @@ export const emailPasswordChanged = (user) => sendMail({
     <p style="margin:12px 0 0">Se não foste tu, recupera já o acesso com "Esqueci-me da senha" e fala connosco.</p>
     <p style="margin:24px 0 0;text-align:center">${button(`${site()}/recuperar-senha`, 'Não fui eu')}</p>`),
 });
+
+// ---------- Avisos de stock ----------
+
+export const emailBackInStock = (alert, product) => {
+  const opt = [alert.size && `tamanho ${esc(alert.size)}`, alert.color && esc(alert.color)].filter(Boolean).join(', ');
+  const img = /^https:\/\//.test(product.colors?.find((c) => c.name === alert.color)?.image || product.images?.[0] || '')
+    ? `<img src="${esc(product.colors?.find((c) => c.name === alert.color)?.image || product.images[0])}" width="180" alt="" style="border-radius:8px;display:block;margin:16px auto">` : '';
+  const link = `${site()}/produto/${product.slug}${alert.color ? `?cor=${encodeURIComponent(alert.color)}` : ''}`;
+  return sendMail({
+    to: alert.email,
+    subject: `Voltou! ${product.name}${opt ? ` (${opt.replace(/<[^>]+>/g, '')})` : ''} já está disponível`,
+    html: layout('Voltou ao stock', `
+      <h1 style="font-size:20px;margin:0 0 8px">Voltou ao stock! 🎉</h1>
+      <p style="margin:0">Pediste para te avisarmos: <strong>${esc(product.name)}</strong>${opt ? ` (${opt})` : ''} já está disponível outra vez.</p>
+      ${img}
+      <p style="margin:0;color:#71717a;font-size:12px">As unidades são poucas e podem esgotar depressa.</p>
+      <p style="margin:24px 0 0;text-align:center">${button(link, 'Comprar agora')}</p>`),
+  });
+};

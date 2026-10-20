@@ -30,6 +30,7 @@ const EMPTY = {
   name: '', description: '', category: '', price: '', onSale: false, discount: '',
   images: [], sizes: [], hasColors: false, colors: [], related: [], featured: false, active: true,
   trackStock: true, stock: {}, // stock: { "M|<chave da cor>": "3" }
+  sizeGuide: 'auto', fitNote: '',
 };
 
 // Cada cor tem uma chave só para o formulário (não é guardada)
@@ -117,6 +118,7 @@ const AdminProductForm = () => {
           images: data.images, sizes: data.sizes, hasColors: data.hasColors,
           colors, related: data.related.map(String), featured: data.featured, active: data.active,
           trackStock: Boolean(data.trackStock),
+          sizeGuide: data.sizeGuide || 'auto', fitNote: data.fitNote || '',
           // O stock guarda-se pela chave da cor no formulário (assim mudar o nome da cor não perde as quantidades)
           stock: Object.fromEntries((data.variants || []).map((v) => [
             `${v.size}|${v.color ? colors.find((c) => c.name === v.color)?.key || '?' : ''}`, String(v.stock),
@@ -325,6 +327,8 @@ const AdminProductForm = () => {
       featured: form.featured,
       active: form.active,
       trackStock: form.trackStock,
+      sizeGuide: form.sizeGuide,
+      fitNote: form.fitNote.trim(),
       variants: form.trackStock
         ? stockCells.map((c) => ({ size: c.size, color: c.row.key ? c.row.name.trim() : '', stock: stockOf(c.key) }))
         : [],
@@ -462,6 +466,25 @@ const AdminProductForm = () => {
             <p className="text-xs text-zinc-500 mt-3">
               {form.sizes.length ? `Selecionados: ${form.sizes.join(', ')}` : 'Nenhum selecionado: tamanho único.'}
             </p>
+            {form.sizes.length > 0 && (
+              <div className="mt-5 grid sm:grid-cols-2 gap-4 border-t border-zinc-100 pt-4">
+                <div>
+                  <Label htmlFor="sizeGuide">Guia de tamanhos</Label>
+                  <select id="sizeGuide" value={form.sizeGuide} onChange={(e) => set('sizeGuide', e.target.value)} className={inputCls}>
+                    <option value="auto">Automático (pela categoria)</option>
+                    <option value="roupa">Roupa (peito, cintura, anca)</option>
+                    <option value="calcado">Calçado (comprimento do pé)</option>
+                    <option value="nenhum">Não mostrar</option>
+                  </select>
+                  <p className="text-xs text-zinc-500 mt-1">As tabelas estão em src/config/tamanhos.js.</p>
+                </div>
+                <div>
+                  <Label htmlFor="fitNote" optional>Nota sobre o tamanho</Label>
+                  <input id="fitNote" value={form.fitNote} onChange={(e) => set('fitNote', e.target.value)} maxLength={200} className={inputCls}
+                    placeholder="Ex.: Veste grande, recomendamos um tamanho abaixo" />
+                </div>
+              </div>
+            )}
           </Section>
 
           {/* CORES */}

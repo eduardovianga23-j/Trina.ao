@@ -44,6 +44,7 @@ const Privacidade = () => (
       <li><strong>No teu navegador:</strong> o conteúdo do carrinho e a sessão iniciada ficam guardados no teu próprio dispositivo (ver <a href="#cookies">cookies</a>).</li>
       <li><strong>Favoritos:</strong> os produtos que guardas com o coração, associados à tua conta.</li>
       <li><strong>Avaliações:</strong> a nota, o comentário e as fotos que publicares sobre um produto. Aparecem na página do produto com o teu primeiro nome e a inicial do apelido.</li>
+      <li><strong>Avisos de stock:</strong> se pedires para ser avisado quando um produto voltar, guardamos o teu email só para esse aviso.</li>
       <li><strong>Comunicações:</strong> o que nos escreveres quando nos contactas.</li>
     </ul>
 
