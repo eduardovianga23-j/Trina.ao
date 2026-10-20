@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import { can } from '../utils/permissions.js';
 
 export const protect = async (req, res, next) => {
   try {
@@ -28,6 +29,15 @@ export const adminOnly = (req, res, next) => {
 export const staffOnly = (req, res, next) => {
   if (!['admin', 'manager'].includes(req.user?.role)) {
     return res.status(403).json({ message: 'Acesso negado — apenas a equipa da loja' });
+  }
+  next();
+};
+
+// Precisa de uma permissão (o administrador principal tem todas)
+const PERM_LABEL = { products: 'produtos', orders: 'encomendas', reviews: 'avaliações' };
+export const requirePerm = (perm) => (req, res, next) => {
+  if (!can(req.user, perm)) {
+    return res.status(403).json({ message: `Não tens permissão para gerir ${PERM_LABEL[perm] || perm}. Fala com o administrador principal.` });
   }
   next();
 };

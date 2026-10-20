@@ -13,8 +13,14 @@ const userSchema = new mongoose.Schema(
     },
     // Identificador da conta Google (quando a pessoa entra com o Google)
     googleId: { type: String, unique: true, sparse: true },
-    // customer = cliente · manager = gestor (só gere produtos) · admin = administrador principal (gere tudo, incluindo a equipa)
+    // customer = cliente · manager = gestor (com permissões) · admin = administrador principal (gere tudo, incluindo a equipa)
     role: { type: String, enum: ['customer', 'manager', 'admin'], default: 'customer' },
+    // O que um gestor pode fazer (ver utils/permissions.js). O administrador principal pode tudo.
+    permissions: {
+      products: { type: Boolean },
+      orders: { type: Boolean },
+      reviews: { type: Boolean },
+    },
     avatar: { type: String, default: '' },
     // Produtos favoritos (coração)
     favorites: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }], default: [] },

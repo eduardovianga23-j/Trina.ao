@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { authAPI } from '../services/api';
+import { permsOf, firstAdminPath } from '../utils/permissions';
 
 const AuthContext = createContext(null);
 
@@ -27,7 +28,7 @@ export const AuthProvider = ({ children }) => {
     if (!stored?.token) return setChecking(false);
     authAPI
       .getMe()
-      .then(({ data }) => save({ ...stored, name: data.name, email: data.email, role: data.role, avatar: data.avatar || '' }))
+      .then(({ data }) => save({ ...stored, name: data.name, email: data.email, role: data.role, avatar: data.avatar || '', permissions: data.permissions }))
       .catch(() => {})
       .finally(() => setChecking(false));
   }, []);
@@ -74,6 +75,9 @@ export const AuthProvider = ({ children }) => {
         isOwner: user?.role === 'admin',
         isStaff: ['admin', 'manager'].includes(user?.role),
         isAdmin: ['admin', 'manager'].includes(user?.role), // nome antigo, igual a isStaff
+        // can('products' | 'orders' | 'reviews'): o que esta pessoa pode fazer no painel
+        can: (perm) => Boolean(permsOf(user)[perm]),
+        adminHome: firstAdminPath(user),
       }}
     >
       {children}

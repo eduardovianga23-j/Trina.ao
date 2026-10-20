@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { FaChevronDown, FaPhoneAlt, FaEnvelope } from 'react-icons/fa';
 import AdminLayout from './AdminLayout';
+import { useAuth } from '../../context/AuthContext';
 import { orderAPI, apiError } from '../../services/api';
 import { formatEUR } from '../../utils/format';
 import { PAYMENT_METHOD, PAYMENT_STATUS, fmtDateTime, orderNumber, statusBadge } from '../../utils/orders';
 import DeliveryTimeline from '../../assets/components/ui/DeliveryTimeline';
 
 /*
-  /admin/encomendas — só o administrador principal.
+  /admin/encomendas — administrador principal e gestores com a permissão "Encomendas".
+  Só o administrador principal pode cancelar.
   Vê as encomendas pagas, a morada de entrega e marca-as como enviadas ou entregues.
   Os reembolsos fazem-se no painel do Stripe.
 */
@@ -20,6 +22,7 @@ const VIEWS = [
 ];
 
 const OrderRow = ({ order, onChange }) => {
+  const { isOwner } = useAuth(); // cancelar é só para o administrador principal
   const [open, setOpen] = useState(false);
   const [tracking, setTracking] = useState(order.trackingNumber || '');
   const [busy, setBusy] = useState(false);
@@ -138,7 +141,7 @@ const OrderRow = ({ order, onChange }) => {
               </div>
             )}
 
-            {['awaiting', 'paid'].includes(order.paymentStatus) && !['cancelled', 'delivered'].includes(order.orderStatus) && (
+            {isOwner && ['awaiting', 'paid'].includes(order.paymentStatus) && !['cancelled', 'delivered'].includes(order.orderStatus) && (
               <div className="mt-4">
                 {!confirmCancel ? (
                   <button onClick={() => setConfirmCancel(true)} className="text-sm font-semibold text-red-800 hover:underline">Cancelar encomenda</button>

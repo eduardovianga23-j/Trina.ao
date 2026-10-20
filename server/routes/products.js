@@ -12,7 +12,7 @@ import {
   updateProduct,
   deleteProduct,
 } from '../controllers/productController.js';
-import { protect, staffOnly } from '../middleware/auth.js';
+import { protect, requirePerm } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -26,9 +26,9 @@ router.get('/:id/related', getRelatedProducts);
 router.get('/:id', getProductById);
 
 // Equipa da loja (administrador principal e gestores)
-router.get('/admin/all', protect, staffOnly, getAllProductsAdmin);
-router.post('/', protect, staffOnly, createProduct);
-router.put('/:id', protect, staffOnly, updateProduct);
-router.delete('/:id', protect, staffOnly, deleteProduct);
+router.get('/admin/all', protect, requirePerm('products'), getAllProductsAdmin);
+router.post('/', protect, requirePerm('products'), createProduct);
+router.put('/:id', protect, requirePerm('products'), updateProduct);
+router.delete('/:id', protect, requirePerm('products'), deleteProduct);
 
 export default router;

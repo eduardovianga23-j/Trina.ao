@@ -3,6 +3,7 @@ import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import { getStripe, stripeEnabled, stripeMessage } from '../utils/stripe.js';
 import { shippingConfig, shippingFor } from '../utils/shipping.js';
+import { can } from '../utils/permissions.js';
 import { reserveStock, releaseOrderStock, lowStockFor } from '../utils/stock.js';
 import {
   emailOrderPaid, emailMultibanco, emailShipped, emailDelivered, emailCancelled,
@@ -337,7 +338,7 @@ export const getOrderById = async (req, res) => {
     if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ message: 'Encomenda não encontrada' });
     let order = await Order.findById(req.params.id);
     const isOwner = order && String(order.user) === String(req.user._id);
-    if (!order || (!isOwner && req.user.role !== 'admin')) return res.status(404).json({ message: 'Encomenda não encontrada' });
+    if (!order || (!isOwner && !can(req.user, 'orders'))) return res.status(404).json({ message: 'Encomenda não encontrada' });
     order = await trySync(order);
     await order.populate('user', 'name email');
     res.json(publicOrder(order));
@@ -424,6 +425,8 @@ export const updateOrderStatus = async (req, res) => {
         order.deliveredAt = new Date();
         email = emailDelivered;
       } else if (orderStatus === 'cancelled') {
+        // Cancelar pode implicar devolver dinheiro: só o administrador principal
+        if (req.user.role !== 'admin') return res.status(403).json({ message: 'Só o administrador principal pode cancelar encomendas.' });
         if (order.orderStatus === 'delivered') return res.status(400).json({ message: 'Uma encomenda entregue já não pode ser cancelada' });
         // Referência Multibanco por pagar: anula-a no Stripe
         if (order.paymentStatus === 'awaiting' && order.stripePaymentIntentId) {

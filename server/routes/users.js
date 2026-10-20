@@ -2,6 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import User from '../models/User.js';
 import Product from '../models/Product.js';
+import { permsOf, readPermissions } from '../utils/permissions.js';
 import { protect, adminOnly } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -68,7 +69,8 @@ router.delete('/favorites/:productId', protect, async (req, res) => {
 });
 
 // ---------- Equipa (só o administrador principal) ----------
-const teamView = (u) => ({ _id: u._id, name: u.name, email: u.email, role: u.role, createdAt: u.createdAt });
+const teamView = (u) => ({ _id: u._id, name: u.name, email: u.email, role: u.role, avatar: u.avatar, permissions: permsOf(u), createdAt: u.createdAt });
+const noPermission = (p) => !Object.values(p).some(Boolean);
 
 // Lista o administrador principal e os gestores
 router.get('/team', protect, adminOnly, async (req, res) => {
@@ -91,9 +93,29 @@ router.post('/team', protect, adminOnly, async (req, res) => {
     }
     if (user.role === 'admin') return res.status(400).json({ message: 'Esta conta é a do administrador principal.' });
     if (user.role === 'manager') return res.status(400).json({ message: 'Esta pessoa já é gestora.' });
+    const permissions = req.body?.permissions ? readPermissions(req.body.permissions) : { products: true, orders: false, reviews: false };
+    if (noPermission(permissions)) return res.status(400).json({ message: 'Escolhe pelo menos uma permissão.' });
     user.role = 'manager';
+    user.permissions = permissions;
     await user.save();
     res.status(201).json(teamView(user));
+  } catch (err) {
+    res.status(500).json({ message: 'Erro no servidor' });
+  }
+});
+
+// Muda as permissões de um gestor  { permissions: { products, orders, reviews } }
+router.put('/team/:id/permissions', protect, adminOnly, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).catch(() => null);
+    if (!user || user.role !== 'manager') return res.status(404).json({ message: 'Gestor não encontrado' });
+    const permissions = readPermissions(req.body?.permissions);
+    if (noPermission(permissions)) {
+      return res.status(400).json({ message: 'Um gestor precisa de pelo menos uma permissão. Para tirar o acesso todo, usa "Retirar acesso".' });
+    }
+    user.permissions = permissions;
+    await user.save();
+    res.json(teamView(user));
   } catch (err) {
     res.status(500).json({ message: 'Erro no servidor' });
   }
@@ -105,6 +127,7 @@ router.delete('/team/:id', protect, adminOnly, async (req, res) => {
     const user = await User.findById(req.params.id).catch(() => null);
     if (!user || user.role !== 'manager') return res.status(404).json({ message: 'Gestor não encontrado' });
     user.role = 'customer';
+    user.permissions = undefined;
     await user.save();
     res.json({ message: `${user.name} deixou de ser gestor(a).` });
   } catch (err) {

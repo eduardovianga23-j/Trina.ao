@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
 import User from '../models/User.js';
+import { permsOf } from '../utils/permissions.js';
 
 const generateToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
@@ -12,6 +13,7 @@ const session = (user) => ({
   email: user.email,
   role: user.role,
   avatar: user.avatar,
+  permissions: permsOf(user),
   token: generateToken(user._id),
 });
 
@@ -62,7 +64,7 @@ export const getMe = async (req, res) => {
   const u = await User.findById(req.user._id).select('-password -favorites').lean();
   if (!u) return res.status(404).json({ message: 'Conta não encontrada' });
   const { googleId, ...rest } = u;
-  res.json({ ...rest, google: Boolean(googleId) }); // não expõe o identificador Google, só se está ligado
+  res.json({ ...rest, permissions: permsOf(u), google: Boolean(googleId) }); // não expõe o identificador Google, só se está ligado
 };
 
 // ---------- Google ----------
