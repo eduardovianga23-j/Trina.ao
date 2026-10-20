@@ -104,7 +104,7 @@ const Shop = () => {
   const update = (changes) => {
     const next = new URLSearchParams(params);
     Object.entries(changes).forEach(([k, v]) => (v ? next.set(k, v) : next.delete(k)));
-    setParams(next, { replace: false });
+    setParams(next, { state: { keepScroll: true } }); // mudar filtros não sobe a página
   };
   const clearAll = () => {
     const next = new URLSearchParams();

@@ -23,6 +23,7 @@ import Privacidade from './pages/Legal/Privacidade';
 import Termos from './pages/Legal/Termos';
 import Checkout from './pages/Checkout/Checkout';
 import Envios from './pages/Info/Envios';
+import ScrollToTop from './assets/components/ScrollToTop';
 import Contactos from './pages/Info/Contactos';
 import OrderPage from './pages/Order/OrderPage';
 import AdminOrders from './pages/Admin/AdminOrders';
@@ -46,6 +47,7 @@ const App = () => {
     <FavoritesProvider>
     <CartProvider>
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
         <Route path='/' element={<Home />} />
         <Route path='/shop' element={<Shop />} />
