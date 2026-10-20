@@ -1,8 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Logo from '../../assets/components/ui/Logo';
-
-export const ROLE_LABEL = { admin: 'Administrador principal', manager: 'Gestor', customer: 'Cliente' };
+import { roleTitle } from '../../utils/permissions';
 
 // Moldura do painel: barra de topo, separadores e conteúdo
 const AdminLayout = ({ title, actions, children }) => {
@@ -35,7 +34,7 @@ const AdminLayout = ({ title, actions, children }) => {
             <span className="hidden sm:inline text-zinc-500">|</span>
             <span className="hidden sm:flex flex-col items-end leading-tight max-w-[180px]">
               <span className="text-zinc-200 truncate max-w-full">{user?.name}</span>
-              <span className="text-[10px] text-zinc-400">{ROLE_LABEL[user?.role]}</span>
+              <span className="text-[10px] text-zinc-400">{roleTitle(user)}</span>
             </span>
             <button onClick={() => { logout(); navigate('/'); }} className="px-2 py-2 hover:text-zinc-300">Sair</button>
           </nav>

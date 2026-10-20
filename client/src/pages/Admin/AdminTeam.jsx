@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import AdminLayout, { ROLE_LABEL } from './AdminLayout';
+import AdminLayout from './AdminLayout';
 import { teamAPI, apiError } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { PERMISSIONS, permsOf } from '../../utils/permissions';
+import { PERMISSIONS, permsOf, roleTitle } from '../../utils/permissions';
 
 /*
   /admin/equipa — só o administrador principal.
@@ -119,7 +119,7 @@ const AdminTeam = () => {
                     </div>
                     <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded shrink-0 ${
                       m.role === 'admin' ? 'bg-red-50 text-red-800 border border-red-200' : 'bg-zinc-100 text-zinc-700 border border-zinc-200'}`}>
-                      {ROLE_LABEL[m.role]}
+                      {roleTitle(m)}
                     </span>
                     {m.role === 'manager' && (
                       <div className="order-last basis-full sm:pl-12 flex flex-wrap gap-2" role="group" aria-label={`Permissões de ${m.name}`}>

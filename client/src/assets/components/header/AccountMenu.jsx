@@ -4,6 +4,7 @@ import { FaUserCircle, FaBoxOpen, FaHeart, FaUserCog, FaSignOutAlt, FaTools } fr
 import { useAuth } from '../../../context/AuthContext';
 import { useFavorites } from '../../../context/FavoritesContext';
 import UserAvatar from '../ui/UserAvatar';
+import { roleTitle } from '../../../utils/permissions';
 
 /*
   Conta no cabeçalho (computador).
@@ -60,6 +61,7 @@ const AccountMenu = () => {
             <div className="min-w-0">
               <p className="font-bold text-sm text-black truncate">{user.name}</p>
               <p className="text-xs text-zinc-500 truncate">{user.email}</p>
+              {isStaff && <p className="text-[11px] font-semibold text-red-800 truncate mt-0.5">{roleTitle(user)}</p>}
             </div>
           </div>
           <Link role="menuitem" to="/conta" className={item}><FaUserCog className="text-zinc-500" /> Minha conta</Link>

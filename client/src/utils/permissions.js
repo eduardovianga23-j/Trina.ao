@@ -15,3 +15,28 @@ export const permsOf = (user) => {
 
 // Primeira página do painel a que a pessoa tem acesso
 export const firstAdminPath = (user) => PERMISSIONS.find((p) => permsOf(user)[p.key])?.path || null;
+
+/*
+  Título de cada pessoa da equipa, a partir das permissões (muda sozinho quando mudas as permissões):
+    tudo (administrador principal) → "Administrador principal"
+    só uma → "Gestor de encomendas", "Gestor de produtos", "Gestor de avaliações" ou "Contabilidade"
+    duas ou três → "Gestor · Produtos e Encomendas"
+    as quatro → "Gestor geral"
+*/
+const SINGLE_TITLE = {
+  orders: 'Gestor de encomendas',
+  products: 'Gestor de produtos',
+  reviews: 'Gestor de avaliações',
+  reports: 'Contabilidade',
+};
+
+export const roleTitle = (user) => {
+  if (user?.role === 'admin') return 'Administrador principal';
+  if (user?.role !== 'manager') return 'Cliente';
+  const on = PERMISSIONS.filter((p) => permsOf(user)[p.key]);
+  if (on.length === 0) return 'Gestor';
+  if (on.length === 1) return SINGLE_TITLE[on[0].key];
+  if (on.length === PERMISSIONS.length) return 'Gestor geral';
+  const names = on.map((p) => p.label);
+  return `Gestor · ${names.slice(0, -1).join(', ')} e ${names[names.length - 1]}`;
+};
